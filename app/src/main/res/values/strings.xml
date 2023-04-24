@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">AndroidFileDownloader</string>
+    <string name="text_dir">Please select a directory</string>
 </resources>
