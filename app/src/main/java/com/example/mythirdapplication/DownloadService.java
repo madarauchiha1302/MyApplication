@@ -36,7 +36,7 @@ import java.util.Calendar;
 public class DownloadService extends Service {
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
-
+    private Uri uri;
 
     public DownloadService() {
 
@@ -54,7 +54,7 @@ public class DownloadService extends Service {
             // For our sample, we just sleep for 5 seconds.
 
             // TODO: download a file
-            // download();
+            download();
 
             /*
             try {
@@ -104,6 +104,8 @@ public class DownloadService extends Service {
         msg.arg1 = startId;
         serviceHandler.sendMessage(msg);
 
+        uri = (Uri) intent.getExtras().get("uri");
+        Log.d(TAG, "Get uri: :" + uri.getPath()+ " in service");
         // If we get killed, after returning from here, restart
         return START_STICKY;
     }
@@ -114,7 +116,7 @@ public class DownloadService extends Service {
         String filename = String.valueOf(rightnow.get(Calendar.DAY_OF_MONTH)) +
                 String.valueOf(rightnow.get(Calendar.HOUR_OF_DAY)) +
                 String.valueOf(rightnow.get(Calendar.MINUTE)) +
-                String.valueOf(rightnow.get(Calendar.SECOND));
+                String.valueOf(rightnow.get(Calendar.SECOND))+ ".txt";
         Log.i(TAG, "filename = " +filename);
 
 
@@ -123,11 +125,11 @@ public class DownloadService extends Service {
 
 
 
-            URL url = new URL(path);
 
-            File file = new File(this.getFilesDir(), filename);
 
-            Log.i(TAG, "path = "+ file.getAbsolutePath());
+            // Log.d(TAG, String.valueOf(new File(String.valueOf(uri)).createNewFile()));
+
+
 
             /*
             URLConnection conn = url.openConnection();

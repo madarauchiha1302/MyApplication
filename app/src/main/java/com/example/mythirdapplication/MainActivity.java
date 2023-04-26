@@ -5,6 +5,7 @@ import static android.content.ContentValues.TAG;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -12,10 +13,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
     private static final int OPEN_DIR = 1;
     private TextView textDir;
+    private Uri uri;
+    private Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,15 +28,24 @@ public class MainActivity extends AppCompatActivity {
 
         Button buttonDownload = (Button) findViewById(R.id.button_download);
         textDir = (TextView) findViewById(R.id.text_dir);
+        uri = null;
+        context = this;
 
-        Intent intent = new Intent(this, DownloadService.class);
 
         // intent.setData(Uri.parse(fileUrl));
 
         buttonDownload.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Log.d("BUTTONS", "User tapped the downloadButton");
-                startService(intent);
+
+                if(uri != null) {
+                    Intent intent = new Intent(context, DownloadService.class);
+                    intent.putExtra("uri", uri);
+                    startService(intent);
+                }
+                else {
+                    Toast.makeText(context, "Please select a directory", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -68,19 +81,20 @@ public class MainActivity extends AppCompatActivity {
                 && resultCode == Activity.RESULT_OK) {
             // The result data contains a URI for the document or directory that
             // the user selected.
-            Uri uri = null;
+
             if (resultData != null) {
                 uri = resultData.getData();
                 // Perform operations on the document using its URI.
                 Log.d(TAG, "user select dir: " + uri.getPath());
-                updateDir(uri);
+
+                textDir.setText(uri.getPath());
             }
         }
     }
 
-    private void updateDir(Uri uri){
-        textDir.setText(uri.getPath());
-    }
+
+
+
 
 
 
