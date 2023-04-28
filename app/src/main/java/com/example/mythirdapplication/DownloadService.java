@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Calendar;
@@ -36,7 +37,7 @@ import java.util.Calendar;
 public class DownloadService extends Service {
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
-    private Uri uri;
+    private String path;
 
     public DownloadService() {
 
@@ -104,56 +105,76 @@ public class DownloadService extends Service {
         msg.arg1 = startId;
         serviceHandler.sendMessage(msg);
 
-        uri = (Uri) intent.getExtras().get("uri");
-        Log.d(TAG, "Get uri: :" + uri.getPath()+ " in service");
+        // path = intent.getExtras().get("uri").toString();
+        // Log.d(TAG, "Get path: :" + path + " in service");
         // If we get killed, after returning from here, restart
         return START_STICKY;
     }
 
     private void download(){
-        String path = "http://www.aspu.edu.sy/laravel-filemanager/files/18/%D9%85%D8%B1%D8%A7%D8%AC%D8%B9%20%D9%83%D9%84%D9%8A%D8%A9%20%D8%A7%D9%84%D9%87%D9%86%D8%AF%D8%B3%D8%A9%20%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%88%D9%85%D8%A7%D8%AA%D9%8A%D8%A9/DISTRIBUTED%20SYSTEMS%20Concepts%20and%20Design.pdf";
+        //String downloadPath = "http://www.aspu.edu.sy/laravel-filemanager/files/18/%D9%85%D8%B1%D8%A7%D8%AC%D8%B9%20%D9%83%D9%84%D9%8A%D8%A9%20%D8%A7%D9%84%D9%87%D9%86%D8%AF%D8%B3%D8%A9%20%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%88%D9%85%D8%A7%D8%AA%D9%8A%D8%A9/DISTRIBUTED%20SYSTEMS%20Concepts%20and%20Design.pdf";
+        String downloadPath = "https://javadl.oracle.com/webapps/download/AutoDL?BundleId=248242_ce59cff5c23f4e2eaf4e778a117d4c5b";
+
+        URLConnection conn = null;
+        try {
+            conn = new URL(downloadPath).openConnection();
+        } catch (Exception e) {
+            Log.e(TAG,e.getMessage());
+        }
+        // String filename = "myfile.txt";
         Calendar rightnow = Calendar.getInstance();
         String filename = String.valueOf(rightnow.get(Calendar.DAY_OF_MONTH)) +
                 String.valueOf(rightnow.get(Calendar.HOUR_OF_DAY)) +
                 String.valueOf(rightnow.get(Calendar.MINUTE)) +
-                String.valueOf(rightnow.get(Calendar.SECOND))+ ".txt";
+                String.valueOf(rightnow.get(Calendar.SECOND));
         Log.i(TAG, "filename = " +filename);
 
 
+        File file = new File(this.getFilesDir(), filename);
+        Log.d(TAG,file.getPath());
 
+        /*
+        String fileContents = "Hello world!";
+        try (FileOutputStream fos = this.openFileOutput(filename, Context.MODE_PRIVATE)) {
+            fos.write(fileContents.getBytes());
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        */
+
+
+        InputStream is = null;
         try {
+            is = conn.getInputStream();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        FileOutputStream fos = null;
+        try {
+            fos = this.openFileOutput(filename, Context.MODE_PRIVATE);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
 
 
-
-
-
-            // Log.d(TAG, String.valueOf(new File(String.valueOf(uri)).createNewFile()));
-
-
-
-            /*
-            URLConnection conn = url.openConnection();
-
-            InputStream is = conn.getInputStream();
-
-            byte[] bs = new byte[1024];
-
-            int len;
-
-            FileOutputStream fos = this.openFileOutput(filename, Context.MODE_PRIVATE);
-
+        int len;
+        byte[] bs = new byte[1024];
+        try {
             while((len = is.read(bs)) != -1){
                 fos.write(bs, 0, len);
             }
-
             fos.close();
             is.close();
-
-            */
-
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
+
+
+
+
     }
 
 
