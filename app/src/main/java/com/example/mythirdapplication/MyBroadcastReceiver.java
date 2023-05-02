@@ -12,11 +12,12 @@ import android.widget.Toast;
 
 public class MyBroadcastReceiver extends BroadcastReceiver {
     // private static final String TAG = "MyBroadcastReceiver";
+
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.d(TAG, "receive a broadcast");
-        String msg = intent.getExtras().getString("data");
-        Toast.makeText(context, msg,Toast.LENGTH_SHORT).show();
+
+        Toast.makeText(context, "Download Finished.",Toast.LENGTH_SHORT).show();
 
 
     }
