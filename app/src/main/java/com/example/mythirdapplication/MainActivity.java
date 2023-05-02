@@ -34,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Button buttonDownload = (Button) findViewById(R.id.button_download);
-        textDir = (TextView) findViewById(R.id.text_dir);
         uri = null;
         context = this;
 
