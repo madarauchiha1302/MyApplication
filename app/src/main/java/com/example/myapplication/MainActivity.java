@@ -1,94 +1,154 @@
 package com.example.myapplication;
-import androidx.appcompat.app.AppCompatActivity;
+
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.ParcelUuid;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity  {
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
-    private TextView editText;
-    private Button[] buttons; //creating an array for all the buttons
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
-    private int[] buttonIds = {R.id.btn_0, R.id.btn_1, R.id.btn_2, R.id.btn_3, R.id.btn_4, R.id.btn_5, R.id.btn_6, R.id.btn_7, R.id.btn_8, R.id.btn_9,
-            R.id.plus, R.id.subtract, R.id.multiply, R.id.btn_divide, R.id.btn_clear, R.id.btn_equal}; //creating a array for all the buttonIDs
+public class MainActivity extends AppCompatActivity {
 
-    private StringBuilder inputStringBuilder = new StringBuilder(); //declaring an stringbuilder object to manipulate the text from the button text
-    private double num1 = Double.NaN;
-    private double num2 = Double.NaN;
-    private char currentOperator;
+    private static final long SCAN_PERIOD = 10000; // stop scanning after 10 seconds
+    private final BluetoothManager bluetoothManager = getSystemService(BluetoothManager.class);
+    private final BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+    private boolean scanning = true;
+    private static final int REQUEST_BLUETOOTH_PERMISSION = 1;
+    private static final String[] permissions = new String[]{android.Manifest.permission.BLUETOOTH_CONNECT
+            , android.Manifest.permission.BLUETOOTH_CONNECT};
+
+    // Device scan callback.
+    private final ScanCallback leScanCallback =
+            new ScanCallback() {
+                @Override
+                public void onScanResult(int callbackType, ScanResult result) {
+                    super.onScanResult(callbackType, result);
+                    // TODO: do something with this
+                    result.getDevice();
+                }
+            };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
-        //Initialising the components of the UI
-        editText = findViewById(R.id.result); //we print the result in the textView
-        buttons = new Button[buttonIds.length];
+        // no need to check if the device itself supports bluetooth because of
+        // <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
+        // in manifest
 
-        for (int i = 0; i < buttonIds.length; i++) {
-            buttons[i] = findViewById(buttonIds[i]); //giving the button ids
-            buttons[i].setOnClickListener(onClickListener);
+        checkBluetoothTurnedOn();
+        scanLeDevice();
+    }
+
+    private void checkBluetoothTurnedOn() {
+        if (!bluetoothAdapter.isEnabled()) {
+            // ask user if bluetooth can be turned on
+            // Close the app
+            ActivityResultLauncher<Intent> bluetoothEnableLauncher = registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() == RESULT_OK) {
+                            Toast.makeText(this, "Scanning for devices...",
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "ok :(", Toast.LENGTH_SHORT).show();
+                            finish(); // Close the app
+                        }
+                    });
+
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            bluetoothEnableLauncher.launch(enableBtIntent);
+        }
+    }
+    private void scanLeDevice() {
+        BluetoothLeScanner bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+        Handler handler = new Handler(Looper.myLooper());
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission
+                .BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            requestBluetoothPermission(this);
+        }
+
+        if (!scanning) {
+            // Stops scanning after a predefined scan period.
+            handler.postDelayed(() -> {
+                scanning = false;
+                bluetoothLeScanner.stopScan(leScanCallback);
+            }, SCAN_PERIOD);
+
+            scanning = true;
+
+            UUID desiredUUID = UUID.fromString("00000002-0000-0000-FDFD-FDFDFDFDFDFD");
+            ScanFilter scanFilter = new ScanFilter.Builder()
+                    .setServiceUuid(new ParcelUuid(desiredUUID))
+                    .build();
+
+            List<ScanFilter> scanFilters = new ArrayList<>();
+            scanFilters.add(scanFilter);
+
+            // Create the scan settings
+            ScanSettings scanSettings = new ScanSettings.Builder()
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+                    .build();
+
+            bluetoothLeScanner.startScan(scanFilters, scanSettings, leScanCallback);
+        } else {
+            scanning = false;
+            bluetoothLeScanner.stopScan(leScanCallback);
         }
     }
 
-    private View.OnClickListener onClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            Button button = (Button) v;
-            String buttonText = button.getText().toString();
+    static void requestBluetoothPermission(Activity context) {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(context,
+                android.Manifest.permission.BLUETOOTH_SCAN)
+            || ActivityCompat.shouldShowRequestPermissionRationale(context,
+                android.Manifest.permission.BLUETOOTH_CONNECT)) {
+            // Show an explanation to the user if needed (optional)
+            new AlertDialog.Builder(context)
+                    .setTitle("Bluetooth Permission")
+                    .setMessage("This app requires Bluetooth permission to function properly.")
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        // Request permission again
+                        ActivityCompat.requestPermissions(context, permissions,
+                                REQUEST_BLUETOOTH_PERMISSION);
+                    }).show();
+            // Request permission again
+            ActivityCompat.requestPermissions(context, permissions, REQUEST_BLUETOOTH_PERMISSION);
+        } else {
+            // Request the permission directly
+            ActivityCompat.requestPermissions(context, permissions, REQUEST_BLUETOOTH_PERMISSION);
+        }
+    }
 
-            switch (buttonText) {
-                case "C":
-                    inputStringBuilder.setLength(0);
-                    editText.setText("");//if user selects clear, we set the edittext to empty string and break out of the loop
-                    break;
-                case "=":
-                    if (inputStringBuilder.length() > 0 && !Double.isNaN(num1)) {
-                        num2 = Double.parseDouble(inputStringBuilder.toString());
-                        double result = performCalculation();
-                        editText.setText(String.valueOf(result));
-                        inputStringBuilder.setLength(0);
-                        num1 = Double.NaN;
-                    }
-                    break;
-                case "+":
-                case "-":
-                case "*":
-                case "/":
-                    if (inputStringBuilder.length() > 0) {
-                        num1 = Double.parseDouble(inputStringBuilder.toString());
-                        inputStringBuilder.setLength(0);
-                        currentOperator = buttonText.charAt(0);
-                    }
-                    break;
-                default:
-                    inputStringBuilder.append(buttonText);
-                    editText.setText(inputStringBuilder.toString());
-                    break;
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_BLUETOOTH_PERMISSION) {
+            if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                requestBluetoothPermission(this);
             }
         }
-    };
-
-    private double performCalculation() {
-        double result = Double.NaN;
-
-        switch (currentOperator) {
-            case '+':
-                result = num1 + num2;
-                break;
-            case '-':
-                result = num1 - num2;
-                break;
-            case '*':
-                result = num1 * num2;
-                break;
-            case '/':
-                result = num1 / num2;
-                break;
-        }
-
-        return result;
     }
+
 }
