@@ -2,7 +2,13 @@ package com.example.myapplication;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
@@ -44,9 +50,65 @@ public class MainActivity extends AppCompatActivity {
                 public void onScanResult(int callbackType, ScanResult result) {
                     super.onScanResult(callbackType, result);
                     // TODO: do something with this
-                    result.getDevice();
+                  BluetoothDevice device =  result.getDevice();
                 }
             };
+    private BluetoothGatt bluetoothGatt;
+    private BluetoothGattCharacteristic dataCharacteristic;
+    private UUID serviceUuid = UUID.fromString("00000002-0000-0000-FDFD-FDFDFDFDFDFD");; // The GATT Service UUID for the desired service
+    private UUID characteristicUuid; // this I dont know how to fill up 
+
+    private void readDataFromCharacteristic() {
+        if (bluetoothGatt != null && serviceUuid != null && characteristicUuid != null) {
+            BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
+            if (service != null) {
+                BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUuid);
+                if (characteristic != null) {
+                    bluetoothGatt.readCharacteristic(characteristic);
+                }
+            }
+        }
+    }
+
+    private void enableNotifications() {
+        if (bluetoothGatt != null && serviceUuid != null && characteristicUuid != null) {
+            BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
+            if (service != null) {
+                BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUuid);
+                if (characteristic != null) {
+                    bluetoothGatt.setCharacteristicNotification(characteristic, true);
+
+                    // Enable notifications on the characteristic
+                    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
+                            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
+                    if (descriptor != null) {
+                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                        bluetoothGatt.writeDescriptor(descriptor);
+                    }
+                }
+            }
+        }
+    }
+
+    private void disableNotifications() {
+        if (bluetoothGatt != null && serviceUuid != null && characteristicUuid != null) {
+            BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
+            if (service != null) {
+                BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUuid);
+                if (characteristic != null) {
+                    bluetoothGatt.setCharacteristicNotification(characteristic, false);
+
+                    // Disable notifications on the characteristic
+                    BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
+                            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"));
+                    if (descriptor != null) {
+                        descriptor.setValue(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE);
+                        bluetoothGatt.writeDescriptor(descriptor);
+                    }
+                }
+            }
+        }
+    }
 
 
     @Override
