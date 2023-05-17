@@ -3,12 +3,12 @@ package com.example.myapplication;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
@@ -42,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_BLUETOOTH_PERMISSION = 1;
     private static final String[] permissions = new String[]{android.Manifest.permission.BLUETOOTH_CONNECT
             , android.Manifest.permission.BLUETOOTH_CONNECT};
+    private BluetoothDevice device;
 
     // Device scan callback.
     private final ScanCallback leScanCallback =
@@ -49,16 +50,37 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onScanResult(int callbackType, ScanResult result) {
                     super.onScanResult(callbackType, result);
-                    // TODO: do something with this
-                  BluetoothDevice device =  result.getDevice();
+                    device = result.getDevice();
+                    connectWithGatt();
                 }
             };
     private BluetoothGatt bluetoothGatt;
     private BluetoothGattCharacteristic dataCharacteristic;
-    private UUID serviceUuid = UUID.fromString("00000002-0000-0000-FDFD-FDFDFDFDFDFD");; // The GATT Service UUID for the desired service
-    private UUID characteristicUuid; // this I dont know how to fill up 
+    private UUID serviceUuid = UUID.fromString("00000002-0000-0000-FDFD-FDFDFDFDFDFD");
+    ; // The GATT Service UUID for the desired service
+    private UUID characteristicUuid; // TODO: this I dont know how to fill up
+    private BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
+        @Override
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            super.onServicesDiscovered(gatt, status);
+        }
 
-    private void readDataFromCharacteristic() {
+        @Override
+        public void onCharacteristicRead(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic, @NonNull byte[] value, int status) {
+            super.onCharacteristicRead(gatt, characteristic, value, status);
+        }
+
+        @Override
+        public void onCharacteristicChanged(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic, @NonNull byte[] value) {
+            super.onCharacteristicChanged(gatt, characteristic, value);
+        }
+    };
+
+    private void connectWithGatt() throws SecurityException {
+        bluetoothGatt = device.connectGatt(this, true, gattCallback);
+    }
+
+    private void readDataFromCharacteristic() throws SecurityException{
         if (bluetoothGatt != null && serviceUuid != null && characteristicUuid != null) {
             BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
             if (service != null) {
@@ -70,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void enableNotifications() {
+    private void enableNotifications() throws SecurityException {
         if (bluetoothGatt != null && serviceUuid != null && characteristicUuid != null) {
             BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
             if (service != null) {
@@ -90,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void disableNotifications() {
+    private void disableNotifications() throws SecurityException {
         if (bluetoothGatt != null && serviceUuid != null && characteristicUuid != null) {
             BluetoothGattService service = bluetoothGatt.getService(serviceUuid);
             if (service != null) {
