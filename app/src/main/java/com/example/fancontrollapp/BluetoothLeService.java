@@ -29,6 +29,8 @@ public class BluetoothLeService extends Service {
     }
 
     private static final String uuid = "00000001-0000-0000-FDFD-FDFDFDFDFDFD";
+    private static final UUID SERVICE_UUID = UUID.fromString("00000001-0000-0000-FDFD-FDFDFDFDFDFD");
+    private static final UUID CHAR_UUID = UUID.fromString("10000001-0000-0000-FDFD-FDFDFDFDFDFD");
     private Binder binder = new LocalBinder();
     private BluetoothGatt bluetoothGatt;
 
@@ -115,28 +117,20 @@ public class BluetoothLeService extends Service {
                 // TODO: broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
                 Log.d(TAG, "ACTION_GATT_SERVICES_DISCOVERED");
 
-                UUID uid = bluetoothGatt.getServices().get(0).getUuid();
-                Log.d(TAG, String.valueOf(uid.toString().equals(uuid)));
-                List<BluetoothGattService> services = bluetoothGatt.getServices();
-                // List<Characteristics> chars = new ArrayList<>();
-                // UUID newuid = UUID.fromString("10000001-0000-0000-fdfd-fdfdfdfdfdfd");
-                // BluetoothGattCharacteristic newchar = services.get(0).getCharacteristic(newuid);
-                // readCharacteristic(newchar);
+//                UUID uid = bluetoothGatt.getServices().get(0).getUuid();
+//                Log.d(TAG, String.valueOf(uid.toString().equals(uuid)));
+                BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
 
-                for (int i = 0; i < services.size(); i++) {
-                    // chars.add(services.get(i).getCharacteristics());
+                if (service != null) {
+                    BluetoothGattCharacteristic characteristic = service.getCharacteristic(CHAR_UUID);
 
-                    List<BluetoothGattCharacteristic> chars = services.get(i).getCharacteristics();
-                    for (int j = 0; j < chars.size(); j++) {
-                        readCharacteristic(chars.get(j));
-                    }
+                    Log.w(TAG, "On SD Characteristics: " + service.getCharacteristic(CHAR_UUID));
+
+                    readCharacteristic(characteristic);
+
+                } else {
+                    Log.d(TAG, "service is null");
                 }
-
-
-                // BluetoothGattCharacteristic chari = bluetoothGatt.getServices().get(0).getCharacteristic(UUID.fromString(uuid));
-                // BluetoothGattCharacteristic chari[] = bluetoothGatt.getServices().get(0).getCharacteristics().toArray(new BluetoothGattCharacteristic[0]);
-                // Log.d(TAG, "gatt service discovered func :"+ chari.toString());
-                // readCharacteristic(chari[0]);
 
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
@@ -150,8 +144,11 @@ public class BluetoothLeService extends Service {
         ) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // TODO: broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
-                Log.d(TAG, "read chari success");
-                Log.d(TAG, "CHARI VALUE: " + new String(characteristic.getValue(), StandardCharsets.UTF_8));
+                Log.d(TAG, "read char success");
+                Log.d(TAG, "Read Char value: " + characteristic.getValue());
+                Log.d(TAG, "Read Char value: " + characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1));
+                //readValue = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1);
+
                 if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                     // TODO: Consider calling
                     //    ActivityCompat#requestPermissions
@@ -162,13 +159,16 @@ public class BluetoothLeService extends Service {
                     // for ActivityCompat#requestPermissions for more details.
                     return;
                 }
-                gatt.setCharacteristicNotification(characteristic, true);
+                //gatt.setCharacteristicNotification(characteristic, true);
                 // byte[] byte_on = "1111".getBytes();
-                byte[] byte_on = {11,11};
-                characteristic.setValue(byte_on);
-                Log.d(TAG, "byte on: " + byte_on);
-            }
-            else{
+                byte[] valueToWrite = {0x00, 0x00};
+                //byte[] valueToWrite = {0x11, 0x11};
+                writeCharacteristicValue(valueToWrite, characteristic);
+//                byte_on = convertToByteArray(value);
+
+
+                Log.d(TAG, "value To Write: " + valueToWrite);
+            } else {
                 Log.d(TAG, "GATT not success on read.");
             }
         }
@@ -187,13 +187,48 @@ public class BluetoothLeService extends Service {
         }
         bluetoothGatt.readCharacteristic(characteristic);
 
-
     }
 
-    public List<BluetoothGattService> getSupportedGattServices() {
-        if (bluetoothGatt == null) return null;
-        return bluetoothGatt.getServices();
+    public void writeCharacteristicValue(byte[] value, BluetoothGattCharacteristic characteristic) {
+        if (bluetoothGatt != null && characteristic != null) {
+            characteristic.setValue(value);
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+            bluetoothGatt.writeCharacteristic(characteristic);
+        }
     }
+
+    public static byte[] convertToByteArray(int value) {
+        // Convert Integer to hexadecimal string
+        String hexString = Integer.toHexString(value);
+
+        // Pad the hexadecimal string with leading zeros if necessary
+        if (hexString.length() % 2 != 0) {
+            hexString = "0" + hexString;
+        }
+
+        // Convert hexadecimal string to byte array
+        byte[] byteArray = new byte[hexString.length() / 2];
+        for (int i = 0; i < byteArray.length; i++) {
+            int index = i * 2;
+            int j = Integer.parseInt(hexString.substring(index, index + 2), 16);
+            byteArray[i] = (byte) j;
+        }
+        return byteArray;
+    }
+
+//    public List<BluetoothGattService> getSupportedGattServices() {
+//        if (bluetoothGatt == null) return null;
+//        return bluetoothGatt.getServices();
+//    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -230,7 +265,6 @@ public class BluetoothLeService extends Service {
             return BluetoothLeService.this;
         }
     }
-
 
 
 

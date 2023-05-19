@@ -1,7 +1,8 @@
 package com.example.fancontrollapp;
 
 import static android.content.ContentValues.TAG;
-
+import android.Manifest;
+import android.app.AlertDialog;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 public class MainActivity extends AppCompatActivity {
 
     public BroadcastReceiver broadcastReceiver;
+    private static final int REQUEST_BLUETOOTH_PERMISSION = 1;
     private static final String uuid = "00000001-0000-0000-FDFD-FDFDFDFDFDFD";
     // private static final String uuid = "00000002-0000-0000-FDFD-FDFDFDFDFDFD";
     private LeDeviceListAdapter leDeviceListAdapter;
@@ -46,8 +48,35 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothLeScanner bluetoothLeScanner;
     private ScanSettings scanSettings;
 
+    private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT};
+
+
+    private void requestBluetoothPermission() {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.BLUETOOTH_SCAN)
+                || ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.BLUETOOTH_CONNECT)) {
+            // Show an explanation to the user if needed (optional)
+            new AlertDialog.Builder(this)
+                    .setTitle("Bluetooth Permission")
+                    .setMessage("This app requires Bluetooth permission to function properly.")
+                    .setPositiveButton("OK", (dialog, which) -> {
+                        // Request permission again
+                        ActivityCompat.requestPermissions(this, permissions,
+                                REQUEST_BLUETOOTH_PERMISSION);
+                    }).show();
+            // Request permission again
+            ActivityCompat.requestPermissions(this, permissions, REQUEST_BLUETOOTH_PERMISSION);
+        } else {
+            Log.d(TAG, "permissions not granted");
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -57,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
         Button connButton = findViewById(R.id.button_conn);
         textViewConn = findViewById(R.id.textView_conn);
 
+        requestBluetoothPermission();
 
         bluetoothLeScanner = ((BluetoothManager) getSystemService(BLUETOOTH_SERVICE))
                 .getAdapter().getBluetoothLeScanner();
@@ -83,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
 
     // }
     // Device scan callback.
+
     private ScanCallback leScanCallback =
 
             new ScanCallback() {
@@ -129,8 +160,6 @@ public class MainActivity extends AppCompatActivity {
             };
 
 
-
-
     private boolean scanning;
     private Handler handler = new Handler();
     // Stops scanning after 10 seconds.
@@ -154,34 +183,35 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
     private void scanLeDevice() {
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
 
-            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
-            // requestPermissions(new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-            requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION);
-
-        }
-
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-
-            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
-            // requestPermissions(new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
-            requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION);
-
-        }
-
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
-            // requestPermissions(new String[]{android.Manifest.permission.BLUETOOTH_CONNECT}, 1);
-            requestPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT);
-
-        }
+//        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//            // TODO: Consider calling
+//            //    ActivityCompat#requestPermissions
+//
+//            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
+//            // requestPermissions(new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+//            requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION);
+//
+//        }
+//
+//        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//            // TODO: Consider calling
+//            //    ActivityCompat#requestPermissions
+//
+//            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
+//            // requestPermissions(new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+//            requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION);
+//
+//        }
+//
+//        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+//            // TODO: Consider calling
+//            //    ActivityCompat#requestPermissions
+//            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
+//            // requestPermissions(new String[]{android.Manifest.permission.BLUETOOTH_CONNECT}, 1);
+//            requestPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT);
+//
+//        }
         ArrayList<ScanFilter> scanFilters = new ArrayList<ScanFilter>();
         ParcelUuid parcelUuid = ParcelUuid.fromString(uuid);
         scanFilters.add(new ScanFilter.Builder().setServiceUuid(parcelUuid).build());
@@ -207,7 +237,9 @@ public class MainActivity extends AppCompatActivity {
                     bluetoothLeScanner.stopScan( leScanCallback);
                 }
             }, SCAN_PERIOD);
-
+            if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                requestBluetoothPermission();
+            }
             scanning = true;
             Log.d(TAG, "start scan");
             bluetoothLeScanner.startScan(leScanCallback);
