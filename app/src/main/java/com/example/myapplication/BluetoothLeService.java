@@ -18,6 +18,8 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.UUID;
 
 public class BluetoothLeService extends Service {
@@ -69,13 +71,16 @@ public class BluetoothLeService extends Service {
             return false;
         }
         bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback);
-        if(bluetoothGatt == null) {
+        if (bluetoothGatt == null) {
             Log.w(TAG, "device.connectGatt returned null!");
         }
         return true;
     }
 
     private final BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
+        // needed to read the values of multiple characteristics in a controlled fashion
+        Queue<BluetoothGattCharacteristic> characteristics = new LinkedList<>();
+
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             Log.d(TAG, "called onConnectionStateChange");
@@ -105,10 +110,9 @@ public class BluetoothLeService extends Service {
 
                 BluetoothGattService weatherService = bluetoothGatt.getService(SERVICE_UUID);
                 if (weatherService != null) {
-                    BluetoothGattCharacteristic temperatureCharacteristic = weatherService.getCharacteristic(TEMPERATURE_UUID);
-                    BluetoothGattCharacteristic humidityCharacteristic = weatherService.getCharacteristic(HUMIDITY_UUID);
-                    readAndNotify(temperatureCharacteristic);
-                    readAndNotify(humidityCharacteristic);
+                    characteristics.add(weatherService.getCharacteristic(TEMPERATURE_UUID));
+                    characteristics.add(weatherService.getCharacteristic(HUMIDITY_UUID));
+                    requestCharacteristics(gatt);
                 } else {
                     Log.d(TAG, "weatherService is null");
                 }
@@ -118,12 +122,21 @@ public class BluetoothLeService extends Service {
         }
 
         @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            super.onDescriptorWrite(gatt, descriptor, status);
+            if (characteristics.size() > 0) {
+                requestCharacteristics(gatt);
+            }
+        }
+
+        @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             Log.d(TAG, "called onCharacteristicRead");
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(characteristic);
+                setCharacteristicNotification(characteristic, true);
             } else {
-                Log.d(TAG, "GATT not success on read.");
+                Log.e(TAG, "GATT no success on read.");
             }
         }
 
@@ -131,6 +144,31 @@ public class BluetoothLeService extends Service {
         public void onCharacteristicChanged(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic, @NonNull byte[] value) {
             Log.d(TAG, "called onCharacteristicChanged");
             broadcastUpdate(characteristic);
+        }
+
+        private void requestCharacteristics(BluetoothGatt gatt) throws SecurityException{
+            try {
+                gatt.readCharacteristic(characteristics.poll());
+            } catch (SecurityException e) {
+                sendBroadcast(new Intent(ACTION_DENIED_PERMISSION));
+            }
+        }
+
+        private void broadcastUpdate(final BluetoothGattCharacteristic characteristic) {
+            Intent intent = new Intent();
+            // This is special handling for the Heart Rate Measurement profile. Data
+            // parsing is carried out as per profile specifications.
+            if (TEMPERATURE_UUID.equals(characteristic.getUuid())) {
+                intent.setAction(ACTION_TEMPERATURE_UPDATE);
+                final int temperature = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1);
+                intent.putExtra(INTENT_TEMPERATURE_EXTRA, temperature);
+            } else if (HUMIDITY_UUID.equals(characteristic.getUuid())) {
+                intent.setAction(ACTION_HUMIDITY_UPDATE);
+                final int humidity = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+                intent.putExtra(INTENT_HUMIDITY_EXTRA, humidity);
+            }
+            sendBroadcast(intent);
+            Log.d(TAG, "sent broadcast for a characteristic in broadcastUpdate");
         }
     };
 
@@ -147,11 +185,6 @@ public class BluetoothLeService extends Service {
             return;
         }
         bluetoothGatt.readCharacteristic(characteristic);
-    }
-
-    private void readAndNotify(BluetoothGattCharacteristic characteristic) {
-        readCharacteristic(characteristic);
-        setCharacteristicNotification(characteristic, true);
     }
 
     private void setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enabled) throws SecurityException {
@@ -191,23 +224,6 @@ public class BluetoothLeService extends Service {
         }
         bluetoothGatt.close();
         bluetoothGatt = null;
-    }
-
-    private void broadcastUpdate(final BluetoothGattCharacteristic characteristic) {
-        Intent intent = new Intent();
-        // This is special handling for the Heart Rate Measurement profile. Data
-        // parsing is carried out as per profile specifications.
-        if (TEMPERATURE_UUID.equals(characteristic.getUuid())) {
-            intent.setAction(ACTION_TEMPERATURE_UPDATE);
-            final int temperature = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1);
-            intent.putExtra(INTENT_TEMPERATURE_EXTRA, temperature);
-        } else if (HUMIDITY_UUID.equals(characteristic.getUuid())) {
-            intent.setAction(ACTION_HUMIDITY_UPDATE);
-            final int humidity = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
-            intent.putExtra(INTENT_HUMIDITY_EXTRA, humidity);
-        }
-        sendBroadcast(intent);
-        Log.d(TAG, "sent broadcast for a characteristic in broadcastUpdate");
     }
 
     class LocalBinder extends Binder {
