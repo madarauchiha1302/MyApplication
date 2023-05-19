@@ -22,7 +22,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.ParcelUuid;
+import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,7 +36,6 @@ import androidx.core.app.ActivityCompat;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,27 +46,57 @@ public class MainActivity extends AppCompatActivity {
     private Button startScanButton;
     private boolean scanning = false;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 1;
-    private static final String[] permissions = new String[]{Manifest.permission.BLUETOOTH_SCAN,
-            android.Manifest.permission.BLUETOOTH_CONNECT};
-    private BluetoothManager bluetoothManager;
+    private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT};
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothDevice device;
     private BluetoothLeService bluetoothLeService;
     private BluetoothLeScanner bluetoothLeScanner;
 
-    private ScanCallback leScanCallback;
+    private ScanCallback leScanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) throws SecurityException{
+            super.onScanResult(callbackType, result);
+            if (result.getDevice() != null) {
+                String deviceIdentifier = result.getDevice().toString();
+                Log.d(TAG, "Found device: " + deviceIdentifier);
+                if (deviceIdentifier.equals("F6:B6:2A:79:7B:5D")) {
+                    Log.d(TAG, "Target device found. Stopping scan.");
+                    bluetoothLeScanner.stopScan(leScanCallback);
+                    scanning = false;
+                    device = result.getDevice();
+                    startLeService();
+                    startScanButton.setVisibility(View.INVISIBLE);
+                    temperature.setText("connected!");
+                    humidity.setText("connected!");
+                }
+            } else {
+                Log.w(TAG, "onScanResult: Device is null");
+            }
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+            Log.e(TAG, "scan failed. " + errorCode);
+        }
+    };
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             bluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
+            Log.i(TAG,"onConnectService called.");
             if (bluetoothLeService != null) {
                 // call functions on service to check connection and connect to devices
-                if (!bluetoothLeService.initialize()) {
+                if (!bluetoothLeService.initialize(bluetoothAdapter)) {
+                    Log.d(TAG,"bluetoothLeService.initialize returned null. Closing app.");
                     finish();
                 }
 
                 if (!bluetoothLeService.connect(device.getAddress())) {
+                    Log.d(TAG,"bluetoothLeService.connect returned null. Closing app.");
                     finish();
                 }
             }
@@ -88,9 +118,9 @@ public class MainActivity extends AppCompatActivity {
             } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
                 showToast("GATT connection has not been successful.", Toast.LENGTH_LONG);
             } else if (BluetoothLeService.ACTION_TEMPERATURE_UPDATE.equals(action)) {
-                temperature.setText(String.format("%.2f", intent.getFloatExtra(BluetoothLeService.INTENT_TEMPERATURE_EXTRA, 0.00f)));
+                temperature.setText(String.format("%.2f", (float) intent.getIntExtra(BluetoothLeService.INTENT_TEMPERATURE_EXTRA, 0) / 100f));
             } else if (BluetoothLeService.ACTION_HUMIDITY_UPDATE.equals(action)) {
-                humidity.setText(String.format("%.2f", intent.getFloatExtra(BluetoothLeService.INTENT_HUMIDITY_EXTRA, 0.00f)));
+                humidity.setText(String.format("%.1f", (float) intent.getIntExtra(BluetoothLeService.INTENT_HUMIDITY_EXTRA, 0) / 10f));
             } else if (BluetoothLeService.ACTION_DENIED_PERMISSION.equals(action)) {
                 requestBluetoothPermission();
             }
@@ -105,12 +135,15 @@ public class MainActivity extends AppCompatActivity {
         this.temperature = findViewById(R.id.temperature);
         this.humidity = findViewById(R.id.humidity);
         this.startScanButton = findViewById(R.id.scan_button);
+        this.bluetoothAdapter = ((BluetoothManager) getSystemService(BLUETOOTH_SERVICE)).getAdapter();
+        this.bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+
         startScanButton.setOnClickListener(view -> {
             showToast("Scanning for bluetooth device", Toast.LENGTH_SHORT);
             startScanButton.setEnabled(false);
             temperature.setText("scanning...");
             humidity.setText("scanning...");
-            checkBluetoothTurnedOn(bluetoothAdapter);
+            scanLeDevice();
         });
 
         // no need to check if the device itself supports bluetooth because of
@@ -126,8 +159,6 @@ public class MainActivity extends AppCompatActivity {
         this.registerReceiver(gattUpdateReceiver, filter);
 
         requestBluetoothPermission();
-        bluetoothManager = getSystemService(BluetoothManager.class);
-        bluetoothAdapter = bluetoothManager.getAdapter();
         checkBluetoothTurnedOn(bluetoothAdapter);
     }
 
@@ -147,7 +178,7 @@ public class MainActivity extends AppCompatActivity {
                     new ActivityResultContracts.StartActivityForResult(),
                     result -> {
                         if (result.getResultCode() == RESULT_OK) {
-                            scanLeDevice(bluetoothAdapter);
+                            scanLeDevice();
                         } else {
                             temperature.setText("turn bluetooth on and restart the app");
                             humidity.setText("turn bluetooth on and restart the app");
@@ -157,23 +188,10 @@ public class MainActivity extends AppCompatActivity {
 
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             bluetoothEnableLauncher.launch(enableBtIntent);
-        } else {
-            scanLeDevice(bluetoothAdapter);
         }
     }
 
-    private void scanLeDevice(BluetoothAdapter bluetoothAdapter) {
-        bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
-        leScanCallback = new ScanCallback() {
-            @Override
-            public void onScanResult(int callbackType, ScanResult result) throws SecurityException{
-                super.onScanResult(callbackType, result);
-                bluetoothLeScanner.stopScan(leScanCallback);
-                device = result.getDevice();
-                startLeService();
-            }
-        };
-
+    private void scanLeDevice() {
         Handler handler = new Handler(Looper.myLooper());
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
@@ -183,20 +201,20 @@ public class MainActivity extends AppCompatActivity {
         if (!scanning) {
             // Stops scanning after a predefined scan period.
             handler.postDelayed(() -> {
-                scanning = false;
-                bluetoothLeScanner.stopScan(leScanCallback);
-                showToast("No device found, scan stopped.", Toast.LENGTH_LONG);
-                startScanButton.setEnabled(true);
-                temperature.setText("device_not_connected");
-                humidity.setText("device_not_connected");
+                // This should not be called when target device was found (see onScanResult).
+                if (scanning) {
+                    scanning = false;
+                    bluetoothLeScanner.stopScan(leScanCallback);
+                    showToast("No device found, scan stopped.", Toast.LENGTH_LONG);
+                    startScanButton.setEnabled(true);
+                    temperature.setText("device_not_connected");
+                    humidity.setText("device_not_connected");
+                }
             }, SCAN_PERIOD);
 
             scanning = true;
 
-            UUID desiredUUID = UUID.fromString("00000002-0000-0000-FDFD-FDFDFDFDFDFD");
-            ScanFilter scanFilter = new ScanFilter.Builder()
-                    .setServiceUuid(new ParcelUuid(desiredUUID))
-                    .build();
+            ScanFilter scanFilter = new ScanFilter.Builder().setDeviceName("IPVSWeather").build();
 
             List<ScanFilter> scanFilters = new ArrayList<>();
             scanFilters.add(scanFilter);
@@ -206,7 +224,8 @@ public class MainActivity extends AppCompatActivity {
                     .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
                     .build();
 
-            bluetoothLeScanner.startScan(scanFilters, scanSettings, leScanCallback);
+            // bluetoothLeScanner.startScan(scanFilters, scanSettings, leScanCallback);
+            bluetoothLeScanner.startScan(leScanCallback);
         } else {
             scanning = false;
             bluetoothLeScanner.stopScan(leScanCallback);
@@ -215,9 +234,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestBluetoothPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                android.Manifest.permission.BLUETOOTH_SCAN)
+                Manifest.permission.BLUETOOTH_SCAN)
                 || ActivityCompat.shouldShowRequestPermissionRationale(this,
-                android.Manifest.permission.BLUETOOTH_CONNECT)) {
+                Manifest.permission.BLUETOOTH_CONNECT)) {
             // Show an explanation to the user if needed (optional)
             new AlertDialog.Builder(this)
                     .setTitle("Bluetooth Permission")
@@ -230,8 +249,7 @@ public class MainActivity extends AppCompatActivity {
             // Request permission again
             ActivityCompat.requestPermissions(this, permissions, REQUEST_BLUETOOTH_PERMISSION);
         } else {
-            // Request the permission directly
-            ActivityCompat.requestPermissions(this, permissions, REQUEST_BLUETOOTH_PERMISSION);
+            // TODO
         }
     }
 
@@ -248,6 +266,7 @@ public class MainActivity extends AppCompatActivity {
     private void startLeService() {
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+        Log.i(TAG, "Bound with service.");
     }
 
     private void showToast(String message, Integer length) {

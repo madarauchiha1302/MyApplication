@@ -22,8 +22,8 @@ import java.util.UUID;
 
 public class BluetoothLeService extends Service {
 
-    private static final UUID SERVICE_UUID = UUID.fromString("00000001-0000-0000-FDFD-FDFDFDFDFDFD");
-    private static final UUID TEMPERATURE_UUID = UUID.fromString("00002A6E-0000-1000-8000-00805F9B34FB");
+    private static final UUID SERVICE_UUID = UUID.fromString("00000002-0000-0000-FDFD-FDFDFDFDFDFD");
+    private static final UUID TEMPERATURE_UUID = UUID.fromString("00002A1C-0000-1000-8000-00805F9B34FB");
     private static final UUID HUMIDITY_UUID = UUID.fromString("00002A6F-0000-1000-8000-00805F9B34FB");
     private static final UUID CLIENT_CHARACTERISTIC_CONFIG_UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB");
     public static final String INTENT_TEMPERATURE_EXTRA = "temperature";
@@ -39,17 +39,18 @@ public class BluetoothLeService extends Service {
 
     private BluetoothAdapter bluetoothAdapter;
 
-    public boolean initialize() {
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    public boolean initialize(BluetoothAdapter bluetoothAdapter) {
+        Log.d(TAG, "called initialize");
         if (bluetoothAdapter == null) {
             Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
             return false;
         }
+        this.bluetoothAdapter = bluetoothAdapter;
         return true;
     }
 
     protected boolean connect(final String address) {
-        Log.d(TAG, "enter service connect");
+        Log.d(TAG, "called connect");
 
         if (bluetoothAdapter == null || address == null) {
             Log.w(TAG, "BluetoothAdapter not initialized or unspecified address.");
@@ -68,12 +69,16 @@ public class BluetoothLeService extends Service {
             return false;
         }
         bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback);
+        if(bluetoothGatt == null) {
+            Log.w(TAG, "device.connectGatt returned null!");
+        }
         return true;
     }
 
     private final BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            Log.d(TAG, "called onConnectionStateChange");
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 // successfully connected to the GATT Server
                 Log.d(TAG, "successfully connected to the GATT Server");
@@ -81,6 +86,7 @@ public class BluetoothLeService extends Service {
                 // results are available in onServicesDiscovered
                 try {
                     bluetoothGatt.discoverServices();
+                    Log.d(TAG, "called discoverServices");
                 } catch (SecurityException e) {
                     sendBroadcast(new Intent(ACTION_DENIED_PERMISSION));
                 }
@@ -93,14 +99,19 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            Log.d(TAG, "called onServicesDiscovered");
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "ACTION_GATT_SERVICES_DISCOVERED");
 
                 BluetoothGattService weatherService = bluetoothGatt.getService(SERVICE_UUID);
-                BluetoothGattCharacteristic temperatureCharacteristic = weatherService.getCharacteristic(TEMPERATURE_UUID);
-                BluetoothGattCharacteristic humidityCharacteristic = weatherService.getCharacteristic(HUMIDITY_UUID);
-                readAndNotify(temperatureCharacteristic);
-                readAndNotify(humidityCharacteristic);
+                if (weatherService != null) {
+                    BluetoothGattCharacteristic temperatureCharacteristic = weatherService.getCharacteristic(TEMPERATURE_UUID);
+                    BluetoothGattCharacteristic humidityCharacteristic = weatherService.getCharacteristic(HUMIDITY_UUID);
+                    readAndNotify(temperatureCharacteristic);
+                    readAndNotify(humidityCharacteristic);
+                } else {
+                    Log.d(TAG, "weatherService is null");
+                }
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
@@ -108,6 +119,7 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            Log.d(TAG, "called onCharacteristicRead");
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(characteristic);
             } else {
@@ -117,6 +129,7 @@ public class BluetoothLeService extends Service {
 
         @Override
         public void onCharacteristicChanged(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic, @NonNull byte[] value) {
+            Log.d(TAG, "called onCharacteristicChanged");
             broadcastUpdate(characteristic);
         }
     };
@@ -142,12 +155,14 @@ public class BluetoothLeService extends Service {
     }
 
     private void setCharacteristicNotification(BluetoothGattCharacteristic characteristic, boolean enabled) throws SecurityException {
+        Log.d(TAG, "called setCharacteristicNotification");
         if (bluetoothGatt == null) {
             Log.w(TAG, "BluetoothGatt not initialized");
             return;
         }
 
         bluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+
         BluetoothGattDescriptor descriptor = characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_UUID);
         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
         bluetoothGatt.writeDescriptor(descriptor);
@@ -155,11 +170,13 @@ public class BluetoothLeService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        Log.d(TAG, "called onBind.");
         return binder;
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
+        Log.d(TAG, "called onUnbind.");
         close();
         return super.onUnbind(intent);
     }
@@ -183,13 +200,14 @@ public class BluetoothLeService extends Service {
         if (TEMPERATURE_UUID.equals(characteristic.getUuid())) {
             intent.setAction(ACTION_TEMPERATURE_UPDATE);
             final int temperature = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1);
-            intent.putExtra(INTENT_TEMPERATURE_EXTRA, String.valueOf(temperature));
+            intent.putExtra(INTENT_TEMPERATURE_EXTRA, temperature);
         } else if (HUMIDITY_UUID.equals(characteristic.getUuid())) {
             intent.setAction(ACTION_HUMIDITY_UPDATE);
-            final int humidity = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1);
-            intent.putExtra(INTENT_HUMIDITY_EXTRA, String.valueOf(humidity));
+            final int humidity = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
+            intent.putExtra(INTENT_HUMIDITY_EXTRA, humidity);
         }
         sendBroadcast(intent);
+        Log.d(TAG, "sent broadcast for a characteristic in broadcastUpdate");
     }
 
     class LocalBinder extends Binder {
