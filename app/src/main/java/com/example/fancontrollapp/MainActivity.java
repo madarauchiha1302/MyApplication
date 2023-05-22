@@ -8,10 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothClass;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
@@ -31,7 +27,6 @@ import android.os.ParcelUuid;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -40,7 +35,6 @@ public class MainActivity extends AppCompatActivity {
     public BroadcastReceiver broadcastReceiver;
     private static final int REQUEST_BLUETOOTH_PERMISSION = 1;
     private static final String uuid = "00000001-0000-0000-FDFD-FDFDFDFDFDFD";
-    // private static final String uuid = "00000002-0000-0000-FDFD-FDFDFDFDFDFD";
     private LeDeviceListAdapter leDeviceListAdapter;
     private TextView textViewConn;
     private Context context;
@@ -51,7 +45,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT};
-
 
     private void requestBluetoothPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this,
@@ -86,6 +79,14 @@ public class MainActivity extends AppCompatActivity {
         Button connButton = findViewById(R.id.button_conn);
         textViewConn = findViewById(R.id.textView_conn);
 
+        Button LedMaxButton = findViewById(R.id.button_ledmax);
+
+        Button ledOffButton = findViewById(R.id.button_ledOff);
+
+        Button ledMedButton = findViewById(R.id.button_ledmed);
+
+        Button ledlowButton = findViewById(R.id.button_ledlow);
+
         requestBluetoothPermission();
 
         bluetoothLeScanner = ((BluetoothManager) getSystemService(BLUETOOTH_SERVICE))
@@ -100,6 +101,51 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).start();
         });
+
+        ledOffButton.setOnClickListener(view -> {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    // Lef off
+                    int WriteValue = 0;
+                    bluetoothService.ControlLed(WriteValue);
+                }
+            }).start();
+        });
+
+        ledlowButton.setOnClickListener(view -> {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    // Intensity low.
+                    int WriteValue = 8000;
+                    bluetoothService.ControlLed(WriteValue);
+                }
+            }).start();
+        });
+
+        ledMedButton.setOnClickListener(view -> {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    // Intensity medium
+                    int WriteValue = 10000;
+                    bluetoothService.ControlLed(WriteValue);
+                }
+            }).start();
+        });
+
+        LedMaxButton.setOnClickListener(view -> {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    // High intensity
+                    int WriteValue = 20000;
+                    bluetoothService.ControlLed(WriteValue);
+                }
+            }).start();
+        });
+
         broadcastReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -108,11 +154,6 @@ public class MainActivity extends AppCompatActivity {
         };
 
     }
-
-    // public void ActivityCompat.OnRequestPermissionsResultCallback(){
-
-    // }
-    // Device scan callback.
 
     private ScanCallback leScanCallback =
 
@@ -146,10 +187,7 @@ public class MainActivity extends AppCompatActivity {
                         startLeService();
                     }
 
-
                 }
-
-
 
                 @Override
                 public void onScanFailed(int errorCode) {
@@ -184,34 +222,6 @@ public class MainActivity extends AppCompatActivity {
             });
     private void scanLeDevice() {
 
-//        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            // TODO: Consider calling
-//            //    ActivityCompat#requestPermissions
-//
-//            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
-//            // requestPermissions(new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-//            requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION);
-//
-//        }
-//
-//        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            // TODO: Consider calling
-//            //    ActivityCompat#requestPermissions
-//
-//            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
-//            // requestPermissions(new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
-//            requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION);
-//
-//        }
-//
-//        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-//            // TODO: Consider calling
-//            //    ActivityCompat#requestPermissions
-//            Log.d(TAG, "No ACCESS_FINE_LOCATION permission!");
-//            // requestPermissions(new String[]{android.Manifest.permission.BLUETOOTH_CONNECT}, 1);
-//            requestPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT);
-//
-//        }
         ArrayList<ScanFilter> scanFilters = new ArrayList<ScanFilter>();
         ParcelUuid parcelUuid = ParcelUuid.fromString(uuid);
         scanFilters.add(new ScanFilter.Builder().setServiceUuid(parcelUuid).build());
@@ -279,7 +289,6 @@ public class MainActivity extends AppCompatActivity {
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         bindService(gattServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
     }
-
 
 
 }

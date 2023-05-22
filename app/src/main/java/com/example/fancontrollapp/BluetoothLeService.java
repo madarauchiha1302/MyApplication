@@ -68,25 +68,12 @@ public class BluetoothLeService extends Service {
 
         // connect to the GATT server on the device
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
 
             Toast.makeText(this, "No BLUETOOTH_CONNECT permission!", Toast.LENGTH_SHORT).show();
             Log.d(TAG, "No BLUETOOTH_CONNECT permission!");
         }
-
-        // connect to the GATT server on the device
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-
-            Toast.makeText(this, "No BLUETOOTH_CONNECT permission!", Toast.LENGTH_SHORT).show();
-            Log.d(TAG, "No BLUETOOTH_CONNECT permission!");
-        }
-
 
         bluetoothGatt = device.connectGatt(this, false, bluetoothGattCallback);
-
 
         return true;
     }
@@ -115,10 +102,9 @@ public class BluetoothLeService extends Service {
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // TODO: broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+
                 Log.d(TAG, "ACTION_GATT_SERVICES_DISCOVERED");
 
-//                UUID uid = bluetoothGatt.getServices().get(0).getUuid();
-//                Log.d(TAG, String.valueOf(uid.toString().equals(uuid)));
                 BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
 
                 if (service != null) {
@@ -145,9 +131,6 @@ public class BluetoothLeService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 // TODO: broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
                 Log.d(TAG, "read char success");
-                Log.d(TAG, "Read Char value: " + characteristic.getValue());
-                Log.d(TAG, "Read Char value: " + characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1));
-                //readValue = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1);
 
                 if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                     // TODO: Consider calling
@@ -159,15 +142,9 @@ public class BluetoothLeService extends Service {
                     // for ActivityCompat#requestPermissions for more details.
                     return;
                 }
-                //gatt.setCharacteristicNotification(characteristic, true);
-                // byte[] byte_on = "1111".getBytes();
-                byte[] valueToWrite = {0x00, 0x00};
-                //byte[] valueToWrite = {0x11, 0x11};
-                writeCharacteristicValue(valueToWrite, characteristic);
-//                byte_on = convertToByteArray(value);
+//                TurnOnFan();
 
-
-                Log.d(TAG, "value To Write: " + valueToWrite);
+//                Log.d(TAG, "value To Write: " + WriteValue);
             } else {
                 Log.d(TAG, "GATT not success on read.");
             }
@@ -189,46 +166,31 @@ public class BluetoothLeService extends Service {
 
     }
 
-    public void writeCharacteristicValue(byte[] value, BluetoothGattCharacteristic characteristic) {
+    public void writeCharacteristicValue(int value, BluetoothGattCharacteristic characteristic) {
         if (bluetoothGatt != null && characteristic != null) {
-            characteristic.setValue(value);
+            characteristic.setValue(value, BluetoothGattCharacteristic.FORMAT_UINT16,0);
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
+
                 return;
             }
             bluetoothGatt.writeCharacteristic(characteristic);
         }
     }
 
-    public static byte[] convertToByteArray(int value) {
-        // Convert Integer to hexadecimal string
-        String hexString = Integer.toHexString(value);
+    public void ControlLed(int WriteValue)
+    {
+        BluetoothGattService service = bluetoothGatt.getService(SERVICE_UUID);
 
-        // Pad the hexadecimal string with leading zeros if necessary
-        if (hexString.length() % 2 != 0) {
-            hexString = "0" + hexString;
-        }
+        if (service != null) {
+            BluetoothGattCharacteristic characteristic = service.getCharacteristic(CHAR_UUID);
 
-        // Convert hexadecimal string to byte array
-        byte[] byteArray = new byte[hexString.length() / 2];
-        for (int i = 0; i < byteArray.length; i++) {
-            int index = i * 2;
-            int j = Integer.parseInt(hexString.substring(index, index + 2), 16);
-            byteArray[i] = (byte) j;
+            writeCharacteristicValue(WriteValue, characteristic);
         }
-        return byteArray;
+        else {
+            Log.d(TAG, "service is null");
+        }
     }
 
-//    public List<BluetoothGattService> getSupportedGattServices() {
-//        if (bluetoothGatt == null) return null;
-//        return bluetoothGatt.getServices();
-//    }
 
     @Override
     public IBinder onBind(Intent intent) {
