@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
@@ -49,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT};
-    private BluetoothAdapter bluetoothAdapter;
+    private BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     private BluetoothDevice device;
     private BluetoothLeService bluetoothLeService;
     private BluetoothLeScanner bluetoothLeScanner;
@@ -132,11 +131,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        checkBluetoothTurnedOn(bluetoothAdapter);
+        requestBluetoothPermission();
+
         this.temperature = findViewById(R.id.temperature);
         this.humidity = findViewById(R.id.humidity);
         this.startScanButton = findViewById(R.id.scan_button);
-        this.bluetoothAdapter = ((BluetoothManager) getSystemService(BLUETOOTH_SERVICE)).getAdapter();
         this.bluetoothLeScanner = bluetoothAdapter.getBluetoothLeScanner();
+
 
         startScanButton.setOnClickListener(view -> {
             showToast("Scanning for bluetooth device", Toast.LENGTH_SHORT);
@@ -158,9 +160,6 @@ public class MainActivity extends AppCompatActivity {
         filter.addAction(BluetoothLeService.ACTION_HUMIDITY_UPDATE);
         filter.addAction(BluetoothLeService.ACTION_DENIED_PERMISSION);
         this.registerReceiver(gattUpdateReceiver, filter);
-
-        requestBluetoothPermission();
-        checkBluetoothTurnedOn(bluetoothAdapter);
     }
 
     @Override
@@ -170,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
         this.unbindService(serviceConnection);
     }
 
-    private void checkBluetoothTurnedOn(BluetoothAdapter bluetoothAdapter) {
+    private void checkBluetoothTurnedOn(@NonNull BluetoothAdapter bluetoothAdapter) {
         // TODO: this code crashes the app when the user clicks the scan button while bluetooth
         //  is turned off
        if (!bluetoothAdapter.isEnabled()) {
@@ -258,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
             // Request permission again
             ActivityCompat.requestPermissions(this, permissions, REQUEST_BLUETOOTH_PERMISSION);
         } else {
-            // TODO
+            ActivityCompat.requestPermissions(this, permissions, REQUEST_BLUETOOTH_PERMISSION);
         }
     }
 
