@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             } else if (BluetoothLeService.ACTION_TEMPERATURE_UPDATE.equals(action)) {
                 temperature.setText(String.format("%.2f", (float) intent.getIntExtra(BluetoothLeService.INTENT_TEMPERATURE_EXTRA, 0) / 100f));
             } else if (BluetoothLeService.ACTION_HUMIDITY_UPDATE.equals(action)) {
-                humidity.setText(String.format("%.1f", (float) intent.getIntExtra(BluetoothLeService.INTENT_HUMIDITY_EXTRA, 0) / 10f));
+                humidity.setText(String.format("%.1f", (float) intent.getIntExtra(BluetoothLeService.INTENT_HUMIDITY_EXTRA, 0) / 100f));
             } else if (BluetoothLeService.ACTION_DENIED_PERMISSION.equals(action)) {
                 requestBluetoothPermission();
             }
@@ -144,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
             temperature.setText("scanning...");
             humidity.setText("scanning...");
             scanLeDevice();
+            requestBluetoothPermission();
         });
 
         // no need to check if the device itself supports bluetooth because of
@@ -172,24 +173,32 @@ public class MainActivity extends AppCompatActivity {
     private void checkBluetoothTurnedOn(BluetoothAdapter bluetoothAdapter) {
         // TODO: this code crashes the app when the user clicks the scan button while bluetooth
         //  is turned off
-        if (!bluetoothAdapter.isEnabled()) {
+       if (!bluetoothAdapter.isEnabled()) {
             // ask user if bluetooth can be turned on
             ActivityResultLauncher<Intent> bluetoothEnableLauncher = registerForActivityResult(
                     new ActivityResultContracts.StartActivityForResult(),
                     result -> {
                         if (result.getResultCode() == RESULT_OK) {
                             scanLeDevice();
-                        } else {
+                        }/* else {
                             temperature.setText("turn bluetooth on and restart the app");
                             humidity.setText("turn bluetooth on and restart the app");
                             startScanButton.setEnabled(false);
-                        }
+                        }*/
                     });
 
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             bluetoothEnableLauncher.launch(enableBtIntent);
         }
+        /*if (bluetoothAdapter.isEnabled()) {
+            temperature.setText("turn bluetooth on and restart the app");
+            humidity.setText("turn bluetooth on and restart the app");
+            startScanButton.setEnabled(false);
+        } else {
+            scanLeDevice();
+        }*/
     }
+
 
     private void scanLeDevice() {
         Handler handler = new Handler(Looper.myLooper());
@@ -264,9 +273,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startLeService() {
-        Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
-        bindService(gattServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-        Log.i(TAG, "Bound with service.");
+        if (bluetoothLeService == null) {
+            Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
+            bindService(gattServiceIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+            Log.i(TAG, "Bound with service.");
+        }
     }
 
     private void showToast(String message, Integer length) {
