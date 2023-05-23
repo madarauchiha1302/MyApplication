@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     // Intensity low.
-                    int WriteValue = 8000;
+                    int WriteValue = 10000;
                     bluetoothService.ChangeFanSpeed(WriteValue);
                 }
             }).start();
@@ -125,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     // Intensity medium
-                    int WriteValue = 10000;
+                    int WriteValue = 32767;
                     bluetoothService.ChangeFanSpeed(WriteValue);
                 }
             }).start();
@@ -136,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     // High intensity
-                    int WriteValue = 20000;
+                    int WriteValue = 65535;
                     bluetoothService.ChangeFanSpeed(WriteValue);
                 }
             }).start();
