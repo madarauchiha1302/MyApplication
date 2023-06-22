@@ -14,15 +14,14 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.ParcelUuid;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,6 +37,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final ParcelUuid serviceUid = ParcelUuid.fromString("0000feaa-0000-1000-8000-00805f9b34fb");
     private static final long SCAN_PERIOD = 10000; // stop scanning after 10 seconds
     private static final String TAG = "MainActivity";
     private TextView temperature;
@@ -60,16 +60,15 @@ public class MainActivity extends AppCompatActivity {
             if (result.getDevice() != null) {
                 String deviceIdentifier = result.getDevice().toString();
                 Log.d(TAG, "Found device: " + deviceIdentifier);
-                if (deviceIdentifier.equals("F6:B6:2A:79:7B:5D")) {
-                    Log.d(TAG, "Target device found. Stopping scan.");
-                    bluetoothLeScanner.stopScan(leScanCallback);
-                    scanning = false;
-                    device = result.getDevice();
-                    startLeService();
-                    startScanButton.setVisibility(View.INVISIBLE);
-                    temperature.setText("connected!");
-                    humidity.setText("connected!");
-                }
+                BluetoothDevice device = result.getDevice();
+                String deviceName = device.getName();
+                String deviceAddress = device.getAddress();
+                byte[] scanRecord = result.getScanRecord().getBytes();
+                int rssi = result.getRssi();
+                Log.i(TAG, "Device name: " + deviceName);
+                Log.i(TAG, "Device address: " + deviceAddress);
+                Log.i(TAG, "Device scan record: " + scanRecord);
+                Log.i(TAG, "Device RSSI: " + rssi);
             } else {
                 Log.w(TAG, "onScanResult: Device is null");
             }
@@ -153,13 +152,13 @@ public class MainActivity extends AppCompatActivity {
         // <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
         // in manifest
 
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
-        filter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
-        filter.addAction(BluetoothLeService.ACTION_TEMPERATURE_UPDATE);
-        filter.addAction(BluetoothLeService.ACTION_HUMIDITY_UPDATE);
-        filter.addAction(BluetoothLeService.ACTION_DENIED_PERMISSION);
-        this.registerReceiver(gattUpdateReceiver, filter);
+        //IntentFilter filter = new IntentFilter();
+        //filter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
+        //filter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        //filter.addAction(BluetoothLeService.ACTION_TEMPERATURE_UPDATE);
+        //filter.addAction(BluetoothLeService.ACTION_HUMIDITY_UPDATE);
+        //filter.addAction(BluetoothLeService.ACTION_DENIED_PERMISSION);
+        //this.registerReceiver(gattUpdateReceiver, filter);
     }
 
     @Override
@@ -189,13 +188,6 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             bluetoothEnableLauncher.launch(enableBtIntent);
         }
-        /*if (bluetoothAdapter.isEnabled()) {
-            temperature.setText("turn bluetooth on and restart the app");
-            humidity.setText("turn bluetooth on and restart the app");
-            startScanButton.setEnabled(false);
-        } else {
-            scanLeDevice();
-        }*/
     }
 
 
@@ -222,18 +214,14 @@ public class MainActivity extends AppCompatActivity {
 
             scanning = true;
 
-            ScanFilter scanFilter = new ScanFilter.Builder().setDeviceName("IPVSWeather").build();
-
-            List<ScanFilter> scanFilters = new ArrayList<>();
-            scanFilters.add(scanFilter);
-
-            // Create the scan settings
-            ScanSettings scanSettings = new ScanSettings.Builder()
-                    .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+            // Source: https://proandroiddev.com/scanning-google-eddystone-in-android-application-cf181e0a8648
+            List<ScanFilter> filters = new ArrayList<> ();
+            filters.add(new ScanFilter.Builder().setServiceUuid(serviceUid).build());
+            ScanSettings settings = new ScanSettings.Builder()
+                    .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                     .build();
 
-            // bluetoothLeScanner.startScan(scanFilters, scanSettings, leScanCallback);
-            bluetoothLeScanner.startScan(leScanCallback);
+            bluetoothLeScanner.startScan(filters, settings, leScanCallback);
         } else {
             scanning = false;
             bluetoothLeScanner.stopScan(leScanCallback);
