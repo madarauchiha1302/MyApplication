@@ -32,6 +32,13 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.neovisionaries.bluetooth.ble.advertising.ADPayloadParser;
+import com.neovisionaries.bluetooth.ble.advertising.ADStructure;
+import com.neovisionaries.bluetooth.ble.advertising.EddystoneTLM;
+import com.neovisionaries.bluetooth.ble.advertising.EddystoneUID;
+import com.neovisionaries.bluetooth.ble.advertising.EddystoneURL;
+
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,29 +64,38 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onScanResult(int callbackType, ScanResult result) throws SecurityException{
             super.onScanResult(callbackType, result);
-            if (result.getDevice() != null) {
-                String deviceIdentifier = result.getDevice().toString();
-                Log.d(TAG, "Found device: " + deviceIdentifier);
-                BluetoothDevice device = result.getDevice();
-                String deviceName = device.getName();
-                String deviceAddress = device.getAddress();
-                byte[] scanRecord = result.getScanRecord().getBytes();
-                int rssi = result.getRssi();
-                Log.i(TAG, "Device name: " + deviceName);
-                Log.i(TAG, "Device address: " + deviceAddress);
-                Log.i(TAG, "Device scan record: " + scanRecord);
-                Log.i(TAG, "Device RSSI: " + rssi);
-            } else {
-                Log.w(TAG, "onScanResult: Device is null");
-            }
-        }
 
-        @Override
-        public void onScanFailed(int errorCode) {
-            super.onScanFailed(errorCode);
-            Log.e(TAG, "scan failed. " + errorCode);
+            List<ADStructure> structures =
+                    ADPayloadParser.getInstance().parse(result.getScanRecord().getBytes());
+
+            int rssi = result.getRssi();
+
+            // taken from: http://darutk-oboegaki.blogspot.com/2015/08/eddystone-android.html
+            for (ADStructure structure : structures)
+            {
+                if (structure instanceof EddystoneUID)
+                {
+                    EddystoneUID es = (EddystoneUID)structure;
+                    String beaconId = es.getBeaconIdAsString();
+                    int power = es.getTxPower();
+                    double distance = Math.pow(10.0, (rssi + 66) / -20.0);
+                }
+                else if (structure instanceof EddystoneURL)
+                {
+                    EddystoneURL es = (EddystoneURL)structure;
+                    URL url = es.getURL();
+                }
+                else if (structure instanceof EddystoneTLM)
+                {
+                    EddystoneTLM es = (EddystoneTLM)structure;
+                    int version = es.getTLMVersion();
+                    int voltage = es.getBatteryVoltage();
+                    float temperature = es.getBeaconTemperature();
+                    long count = es.getAdvertisementCount();
+                    long time = es.getElapsedTime();
+                }
         }
-    };
+    }};
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
