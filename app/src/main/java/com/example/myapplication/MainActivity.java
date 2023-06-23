@@ -185,8 +185,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkBluetoothTurnedOn(@NonNull BluetoothAdapter bluetoothAdapter) {
-        // TODO: this code crashes the app when the user clicks the scan button while bluetooth
-        //  is turned off
        if (!bluetoothAdapter.isEnabled()) {
             // ask user if bluetooth can be turned on
             ActivityResultLauncher<Intent> bluetoothEnableLauncher = registerForActivityResult(

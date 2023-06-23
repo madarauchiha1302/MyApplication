@@ -7,57 +7,34 @@
     tools:context=".MainActivity">
 
     <TextView
-        android:id="@+id/acc_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="56dp"
-        android:layout_marginTop="280dp"
-        android:text="Temperature (in °C):"
-        android:textSize="16sp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
         android:id="@+id/temperature"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="56dp"
-        android:layout_marginTop="24dp"
-        android:text="device_not_connected"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/acc_label" />
+        android:layout_marginStart="104dp"
+        android:layout_marginTop="116dp"
+        android:text="No data received yet"
+        app:layout_constraintStart_toEndOf="@+id/voltage_label"
+        app:layout_constraintTop_toBottomOf="@+id/textView4" />
 
     <TextView
-        android:id="@+id/gyroscope_label"
+        android:id="@+id/temperature_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="56dp"
-        android:layout_marginTop="500dp"
-        android:text="Humidity (in %):"
-        android:textSize="16sp"
+        android:layout_marginStart="60dp"
+        android:layout_marginTop="116dp"
+        android:text="Temperature:"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/humidity"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="56dp"
-        android:layout_marginTop="28dp"
-        android:text="device_not_connected"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gyroscope_label" />
+        app:layout_constraintTop_toBottomOf="@+id/URL_label" />
 
     <Button
         android:id="@+id/scan_button"
         android:layout_width="147dp"
         android:layout_height="58dp"
+        android:layout_marginBottom="80dp"
         android:text="Start scan"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/humidity"
-        app:layout_constraintVertical_bias="0.366" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/ID_label"
@@ -75,7 +52,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="88dp"
         android:layout_marginTop="56dp"
-        android:text="id data goes here"
+        android:text="No data received yet"
         app:layout_constraintStart_toEndOf="@+id/ID_label"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -95,7 +72,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="124dp"
         android:layout_marginTop="60dp"
-        android:text="URL data goes here"
+        android:text="No data received yet"
         app:layout_constraintStart_toEndOf="@+id/URL_label"
         app:layout_constraintTop_toBottomOf="@+id/beaconID" />
 
@@ -115,28 +92,27 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="104dp"
         android:layout_marginTop="60dp"
-        android:text="voltage data goes here"
+        android:text="No data received yet"
         app:layout_constraintStart_toEndOf="@+id/voltage_label"
         app:layout_constraintTop_toBottomOf="@+id/textView4" />
-
-    <TextView
-        android:id="@+id/distance_label"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="56dp"
-        android:layout_marginTop="40dp"
-        android:text="Distance to beacon in meter: "
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/temperature" />
 
     <TextView
         android:id="@+id/distance"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="56dp"
-        android:layout_marginTop="28dp"
-        android:text="distance data goes here"
+        android:layout_marginStart="60dp"
+        android:layout_marginTop="16dp"
+        android:text="No data received yet"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/distance_label" />
+
+    <TextView
+        android:id="@+id/distance_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="60dp"
+        android:text="Distance to beacon in meter: "
+        app:layout_constraintStart_toStartOf="parent"
+        tools:layout_editor_absoluteY="338dp" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
