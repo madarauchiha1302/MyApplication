@@ -6,6 +6,7 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.ParcelUuid
 import android.util.Log
@@ -60,28 +61,19 @@ class MainActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+        grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         val filters: MutableList<ScanFilter> = ArrayList()
-        filters.add(
-            ScanFilter.Builder()
-                .setServiceUuid(serviceUid)
-                .build()
-        )
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-           .build()
+        filters.add(ScanFilter.Builder().setServiceUuid(serviceUid).build())
+        val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         // Connect to ble service
-        val bm = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bm.adapter
-        if (checkPermission()) {
-            bluetoothAdapter.bluetoothLeScanner.startScan(filters, settings, scanCallback)
+        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) !=
+            PackageManager.PERMISSION_GRANTED) {
+            Log.d(TAG, "onRequestPermissionsResult: no permission")
         }
-    }
-
-    private fun checkPermission(): Boolean {
-        return true
+        bluetoothAdapter.bluetoothLeScanner.startScan(filters, settings, scanCallback)
     }
 
     private val scanCallback = object : ScanCallback() {
@@ -94,9 +86,7 @@ class MainActivity : AppCompatActivity() {
 
             // inspired from: http://darutk-oboegaki.blogspot.com/2015/08/eddystone-android.html
             for (structure in structures) {
-                // If the AD structure represents Eddystone UID.
                 if (structure is EddystoneUID) {
-                    // Eddystone UID
                     beaconId = structure.beaconIdAsString
                     txPower = structure.txPower
 
@@ -108,21 +98,12 @@ class MainActivity : AppCompatActivity() {
                         tvBeaconID.text = "BeaconID: $beaconId"
                         tvDistance.text = "Distance: $distance"
                     }
-
-                    Log.d(TAG, "Tx Power = " + structure.txPower);
-                    Log.d(TAG, "Namespace ID = " + structure.namespaceIdAsString);
-                    Log.d(TAG, "Instance ID = " + structure.instanceIdAsString);
-                    Log.d(TAG, "Beacon ID = " + structure.beaconIdAsString);
                 } else if (structure is EddystoneURL) {
-                    // Eddystone URL
                     val es = structure
                     url = es.url
                     runOnUiThread {
                         tvURL.text = "URL: $url"
                     }
-
-                    Log.d(TAG, "Tx Power = " + es.txPower);
-                    Log.d(TAG, "URL = " + es.url);
                 } else if (structure is EddystoneTLM) {
                     // Eddystone TLM
                     val es = structure
@@ -132,12 +113,6 @@ class MainActivity : AppCompatActivity() {
                         tvVoltage.text = "Voltage: $voltage"
                         tvTemperature.text = "Temperature: $temperature"
                     }
-
-                    Log.d(TAG, "TLM Version = " + es.tlmVersion);
-                    Log.d(TAG, "Battery Voltage = " + es.batteryVoltage);
-                    Log.d(TAG, "Beacon Temperature = " + es.beaconTemperature);
-                    Log.d(TAG, "Advertisement Count = " + es.advertisementCount);
-                    Log.d(TAG, "Elapsed Time = " + es.elapsedTime);
                 }
             }
         }
