@@ -1,94 +1,107 @@
 package com.example.myapplication;
-import androidx.appcompat.app.AppCompatActivity;
+
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity  {
+import androidx.appcompat.app.AppCompatActivity;
 
-    private TextView editText;
-    private Button[] buttons; //creating an array for all the buttons
+public class MainActivity extends AppCompatActivity {
 
-    private int[] buttonIds = {R.id.btn_0, R.id.btn_1, R.id.btn_2, R.id.btn_3, R.id.btn_4, R.id.btn_5, R.id.btn_6, R.id.btn_7, R.id.btn_8, R.id.btn_9,
-            R.id.plus, R.id.subtract, R.id.multiply, R.id.btn_divide, R.id.btn_clear, R.id.btn_equal}; //creating a array for all the buttonIDs
-
-    private StringBuilder inputStringBuilder = new StringBuilder(); //declaring an stringbuilder object to manipulate the text from the button text
-    private double num1 = Double.NaN;
-    private double num2 = Double.NaN;
-    private char currentOperator;
+    private TextView locationAddressText;
+    private Button locationButton;
+    private LocationManager locationManager;
+    private LocationListener locationListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //Initialising the components of the UI
-        editText = findViewById(R.id.result); //we print the result in the textView
-        buttons = new Button[buttonIds.length];
+        locationAddressText = findViewById(R.id.textView_location);
+        locationButton = findViewById(R.id.button_getlocation);
 
-        for (int i = 0; i < buttonIds.length; i++) {
-            buttons[i] = findViewById(buttonIds[i]); //giving the button ids
-            buttons[i].setOnClickListener(onClickListener);
+        locationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getCurrentLocation();
+            }
+        });
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                double latitude = location.getLatitude();
+                double longitude = location.getLongitude();
+                locationAddressText.setText("Latitude: " + latitude + "\nLongitude: " + longitude);
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+                Toast.makeText(MainActivity.this, "Location status changed", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+                Toast.makeText(MainActivity.this, "Location provider enabled", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                Toast.makeText(MainActivity.this, "Location provider disabled", Toast.LENGTH_SHORT).show();
+            }
+        };
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        } else {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }
     }
 
-    private View.OnClickListener onClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            Button button = (Button) v;
-            String buttonText = button.getText().toString();
+    @Override
+    protected void onPause() {
+        super.onPause();
+        locationManager.removeUpdates(locationListener);
+    }
 
-            switch (buttonText) {
-                case "C":
-                    inputStringBuilder.setLength(0);
-                    editText.setText("");//if user selects clear, we set the edittext to empty string and break out of the loop
-                    break;
-                case "=":
-                    if (inputStringBuilder.length() > 0 && !Double.isNaN(num1)) {
-                        num2 = Double.parseDouble(inputStringBuilder.toString());
-                        double result = performCalculation();
-                        editText.setText(String.valueOf(result));
-                        inputStringBuilder.setLength(0);
-                        num1 = Double.NaN;
-                    }
-                    break;
-                case "+":
-                case "-":
-                case "*":
-                case "/":
-                    if (inputStringBuilder.length() > 0) {
-                        num1 = Double.parseDouble(inputStringBuilder.toString());
-                        inputStringBuilder.setLength(0);
-                        currentOperator = buttonText.charAt(0);
-                    }
-                    break;
-                default:
-                    inputStringBuilder.append(buttonText);
-                    editText.setText(inputStringBuilder.toString());
-                    break;
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+                }
+            } else {
+                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show();
             }
         }
-    };
+    }
 
-    private double performCalculation() {
-        double result = Double.NaN;
-
-        switch (currentOperator) {
-            case '+':
-                result = num1 + num2;
-                break;
-            case '-':
-                result = num1 - num2;
-                break;
-            case '*':
-                result = num1 * num2;
-                break;
-            case '/':
-                result = num1 / num2;
-                break;
+    private void getCurrentLocation() {
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (lastKnownLocation != null) {
+                double latitude = lastKnownLocation.getLatitude();
+                double longitude = lastKnownLocation.getLongitude();
+                locationAddressText.setText("Latitude: " + latitude + "\nLongitude: " + longitude);
+            }
+        } else {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }
-
-        return result;
     }
 }
