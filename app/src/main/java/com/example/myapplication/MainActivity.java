@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
     private ServiceConnection mConnection;
 
     private Button testButton;
+    private Button ExitButton;
 
     private static final String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -62,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
         startButton = findViewById(R.id.button_start);
         stopButton = findViewById(R.id.button_stop);
         testButton = findViewById(R.id.button3);
+        ExitButton = findViewById(R.id.exit);
         mBound = false;
         requestPermissions();
 
@@ -93,7 +95,9 @@ public class MainActivity extends AppCompatActivity {
             public void onLocationChanged(Location location) {
                 double latitude = location.getLatitude();
                 double longitude = location.getLongitude();
-                locationAddressText.setText("Latitude: " + latitude + "\nLongitude: " + longitude);
+                double averageSpeed = location.getSpeed();
+                double distance = location.getAccuracy();
+                locationAddressText.setText("Latitude: " + latitude + "\nLongitude: " + longitude + "\nAverage Speed: " + averageSpeed + "\nDistance: " + distance);
             }
 
             @Override
@@ -147,9 +151,14 @@ public class MainActivity extends AppCompatActivity {
                 unbindService(mConnection);
             }
         });
+
+        ExitButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                finish();
+            }
+        });
     }
-
-
 
     private void requestPermissions(){
         if (ActivityCompat.shouldShowRequestPermissionRationale(this,
@@ -242,7 +251,9 @@ public class MainActivity extends AppCompatActivity {
             if (lastKnownLocation != null) {
                 double latitude = lastKnownLocation.getLatitude();
                 double longitude = lastKnownLocation.getLongitude();
-                locationAddressText.setText("Latitude: " + latitude + "\nLongitude: " + longitude);
+                double averageSpeed = lastKnownLocation.getSpeed();
+                double distance = lastKnownLocation.getAccuracy();
+                locationAddressText.setText("Latitude: " + latitude + "\nLongitude: " + longitude + "\nAverage Speed: " + averageSpeed + "\nDistance: " + distance);
             }
         } else {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);

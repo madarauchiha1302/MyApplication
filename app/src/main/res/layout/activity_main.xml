@@ -12,33 +12,34 @@
 
         <Button
             android:id="@+id/button_getlocation"
-            android:layout_width="145dp"
-            android:layout_height="53dp"
+            android:layout_width="117dp"
+            android:layout_height="60dp"
             android:text="Get location"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.448"
+            app:layout_constraintHorizontal_bias="0.417"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.188" />
+            app:layout_constraintVertical_bias="0.068" />
 
         <TextView
             android:id="@+id/textView_location"
-            android:layout_width="174dp"
-            android:layout_height="66dp"
+            android:layout_width="197dp"
+            android:layout_height="133dp"
             android:text="Location address"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.451"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button_getlocation"
-            app:layout_constraintVertical_bias="0.085" />
+            app:layout_constraintVertical_bias="0.054" />
 
         <Button
             android:id="@+id/button_start"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="128dp"
-            android:layout_marginTop="36dp"
+            android:layout_marginStart="116dp"
+            android:layout_marginTop="12dp"
             android:text="Start Service"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/textView_location" />
@@ -47,8 +48,8 @@
             android:id="@+id/button_stop"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="132dp"
-            android:layout_marginTop="24dp"
+            android:layout_marginStart="120dp"
+            android:layout_marginTop="28dp"
             android:text="Stop Service"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button_start" />
@@ -57,10 +58,22 @@
             android:id="@+id/button3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="148dp"
-            android:layout_marginTop="36dp"
-            android:text="Button"
+            android:layout_marginStart="120dp"
+            android:layout_marginTop="40dp"
+            android:text="Log location"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/button_stop" />
+
+        <Button
+            android:id="@+id/exit"
+            android:layout_width="121dp"
+            android:layout_height="41dp"
+            android:text="Exit"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.468"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/button3"
+            app:layout_constraintVertical_bias="0.163" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>
