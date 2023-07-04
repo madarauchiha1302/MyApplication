@@ -28,7 +28,7 @@ public class LocationLogService extends Service implements LocationListener {
     boolean isCancelled = false;
     String location_data = "Wait Wait Wait Wait";
     String segment = "";
-    int counter = 0;
+    String timestamp = new SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(new Date());
 
     @SuppressLint("MissingPermission")
     @Override
@@ -85,7 +85,6 @@ public class LocationLogService extends Service implements LocationListener {
         Log.i("Segment", segment);
         String footer = "</gpx>";
         String data = header + segment + footer;
-        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         String filename = "Location"+timestamp+".gpx";
         String directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS).getAbsolutePath();
         Log.i("location storage", directory);
