@@ -37,7 +37,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var url: URL
     private var voltage: Int = 0
     private var temperature: Float = 0f
-    private var txPower: Int = 0
 
     private lateinit var tvBeaconID: TextView
     private lateinit var tvURL: TextView
@@ -79,7 +78,7 @@ class MainActivity : AppCompatActivity() {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
-            val rssi = result!!.rssi // rssi of the device
+            val rssi = result!!.rssi
 
             val record = result.scanRecord!!.bytes
             val structures = ADPayloadParser.getInstance().parse(record)
@@ -88,12 +87,11 @@ class MainActivity : AppCompatActivity() {
             for (structure in structures) {
                 if (structure is EddystoneUID) {
                     beaconId = structure.beaconIdAsString
-                    txPower = structure.txPower
 
+                    // formula from https://stackoverflow.com/questions/65124232/how-to-get-distance-from-beacons
                     // Path-loss exponent is approx. 2 in free space
-                    // formula taken from lecture 5
-                    // 62 taken from https://stackoverflow.com/questions/52962218/beacon-distance-shows-wrong-values-with-eddystone
-                    val distance = "%.4f".format(10.0.pow((rssi + 62) / -(10.0 * 2)))
+                    // -44 is the measured power at 1m
+                    val distance = "%.4f".format(10.0.pow(((-44) - rssi) / (10.0 * 2)))
                     runOnUiThread {
                         tvBeaconID.text = "BeaconID: $beaconId"
                         tvDistance.text = "Distance: $distance"
@@ -105,7 +103,6 @@ class MainActivity : AppCompatActivity() {
                         tvURL.text = "URL: $url"
                     }
                 } else if (structure is EddystoneTLM) {
-                    // Eddystone TLM
                     val es = structure
                     voltage = es.batteryVoltage
                     temperature = es.beaconTemperature
