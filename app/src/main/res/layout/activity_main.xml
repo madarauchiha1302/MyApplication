@@ -31,15 +31,39 @@
         android:id="@+id/setTemperatureButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="76dp"
+        android:layout_marginTop="48dp"
         android:text="set temperature from API"
-        tools:layout_editor_absoluteX="100dp"
-        tools:layout_editor_absoluteY="495dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/temperatureTv" />
 
     <TextView
         android:id="@+id/temperatureTv"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="44dp"
+        android:layout_marginTop="52dp"
         android:text="Temperature: no temperature fetched"
-        tools:layout_editor_absoluteX="42dp"
-        tools:layout_editor_absoluteY="145dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/citiesSpinner" />
+
+    <Button
+        android:id="@+id/button_update"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="76dp"
+        android:layout_marginTop="40dp"
+        android:text="Update to 1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/setTemperatureButton" />
+
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="40dp"
+        android:text="Update to 2"
+        app:layout_constraintStart_toEndOf="@+id/button_update"
+        app:layout_constraintTop_toBottomOf="@+id/setTemperatureButton" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
@@ -14,8 +15,12 @@ import com.github.prominence.openweathermap.api.OpenWeatherMapClient;
 import com.github.prominence.openweathermap.api.enums.Language;
 import com.github.prominence.openweathermap.api.enums.UnitSystem;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -27,10 +32,10 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
     private final OpenWeatherMapClient openWeatherClient = new OpenWeatherMapClient(
             "a23ec089a5b1cfc2ce6ccfd9524c7448");
-    private final FirebaseDatabase database = FirebaseDatabase.getInstance();
-    private final DatabaseReference myRef = database.getReference();
-    private final DatabaseReference devReference = myRef.child("teams").child("15");
-    private final DatabaseReference mainReference = myRef.child("location");
+    // private final FirebaseDatabase database = FirebaseDatabase.getInstance();
+    // private final DatabaseReference myRef = database.getReference();
+    // private final DatabaseReference devReference = myRef.child("teams").child("15");
+    // private final DatabaseReference mainReference = myRef.child("location");
     private DatabaseReference selectedReference;
     private TextView temperatureTextView;
 
@@ -39,11 +44,65 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // FOR GENERAL TESTING USE devReference, FOR FINAL TESTS USE mainReference
-        selectedReference = devReference;
+        // selectedReference = devReference;
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // FirebaseApp.initializeApp(this);
+
+        FirebaseOptions options = new FirebaseOptions.Builder()
+                .setApplicationId("de.uni_s.ipvs.mcl.assignment5")
+                .setApiKey("AIzaSyBnbpsN3vfoo5xES2y4iTuKVz0btRoPUBU")
+                .setDatabaseUrl("https://assignment5-b5c92.firebaseio.com")
+                .build();
+
+        FirebaseApp.initializeApp(getApplicationContext(), options, "My application");
+
+        DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference node = databaseRef.child("teams").child("15");
+        Button button_update = findViewById(R.id.button_update);
+        Button button_update_2 = findViewById(R.id.button2);
+
+        button_update.setOnClickListener(l -> {
+            Log.i(TAG, "Change value to 1");
+            node.setValue(1);
+        });
+        button_update_2.setOnClickListener(l -> {
+            Log.i(TAG, "Change value to 2");
+            node.setValue(2);
+        });
+
+        /*
+        node.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // Handle the retrieved data here
+                Log.i(TAG, "Detected data is changed to: " + dataSnapshot.getValue());
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle any errors
+            }
+        });
+
+         */
+
+        node.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // Handle the retrieved data here
+                Log.i(TAG, "Detected data is changed to: " + dataSnapshot.getValue());
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle any errors
+            }
+        });
+
+        /*
         Spinner citiesSpinner = findViewById(R.id.citiesSpinner);
         temperatureTextView = findViewById(R.id.temperatureTv);
         Button fetchTemperatureButton = findViewById(R.id.getDataButton);
@@ -68,6 +127,8 @@ public class MainActivity extends AppCompatActivity {
             writeTemperatureToDatabase(selectedReference, citiesSpinner.getSelectedItem().toString(),
                     temperature);
         });
+
+         */
     }
 
     private String getTemperatureFromAPI(String city) {
