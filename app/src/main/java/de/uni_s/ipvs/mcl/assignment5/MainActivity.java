@@ -6,6 +6,7 @@ import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
@@ -15,7 +16,6 @@ import com.github.prominence.openweathermap.api.OpenWeatherMapClient;
 import com.github.prominence.openweathermap.api.enums.Language;
 import com.github.prominence.openweathermap.api.enums.UnitSystem;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -29,106 +29,62 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
-    String TAG = "MainActivity";
+    private String TAG = "MainActivity";
     private final OpenWeatherMapClient openWeatherClient = new OpenWeatherMapClient(
             "a23ec089a5b1cfc2ce6ccfd9524c7448");
-    // private final FirebaseDatabase database = FirebaseDatabase.getInstance();
-    // private final DatabaseReference myRef = database.getReference();
-    // private final DatabaseReference devReference = myRef.child("teams").child("15");
-    // private final DatabaseReference mainReference = myRef.child("location");
+    private final DatabaseReference devReference = FirebaseDatabase.getInstance().getReference().child("teams").child("15");
+    private final DatabaseReference mainReference = FirebaseDatabase.getInstance().getReference().child("location");
     private DatabaseReference selectedReference;
     private TextView temperatureTextView;
 
-
-    @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // FOR GENERAL TESTING USE devReference, FOR FINAL TESTS USE mainReference
-        // selectedReference = devReference;
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // FirebaseApp.initializeApp(this);
+        FirebaseApp.initializeApp(this);
 
-        FirebaseOptions options = new FirebaseOptions.Builder()
-                .setApplicationId("de.uni_s.ipvs.mcl.assignment5")
-                .setApiKey("AIzaSyBnbpsN3vfoo5xES2y4iTuKVz0btRoPUBU")
-                .setDatabaseUrl("https://assignment5-b5c92.firebaseio.com")
-                .build();
+        selectedReference = devReference; // Choose the appropriate reference here
 
-        FirebaseApp.initializeApp(getApplicationContext(), options, "My application");
-
-        DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference();
-        DatabaseReference node = databaseRef.child("teams").child("15");
-        Button button_update = findViewById(R.id.button_update);
-        Button button_update_2 = findViewById(R.id.button2);
-
-        button_update.setOnClickListener(l -> {
-            Log.i(TAG, "Change value to 1");
-            node.setValue(1);
-        });
-        button_update_2.setOnClickListener(l -> {
-            Log.i(TAG, "Change value to 2");
-            node.setValue(2);
-        });
-
-        /*
-        node.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                // Handle the retrieved data here
-                Log.i(TAG, "Detected data is changed to: " + dataSnapshot.getValue());
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Handle any errors
-            }
-        });
-
-         */
-
-        node.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                // Handle the retrieved data here
-                Log.i(TAG, "Detected data is changed to: " + dataSnapshot.getValue());
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Handle any errors
-            }
-        });
-
-        /*
         Spinner citiesSpinner = findViewById(R.id.citiesSpinner);
         temperatureTextView = findViewById(R.id.temperatureTv);
         Button fetchTemperatureButton = findViewById(R.id.getDataButton);
         Button setTemperatureButton = findViewById(R.id.setTemperatureButton);
 
-        ArrayAdapter<CharSequence> adapter=ArrayAdapter.createFromResource(this, R.array.cities,
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.cities,
                 android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         citiesSpinner.setAdapter(adapter);
 
-        citiesSpinner.setOnItemClickListener((adapterView, view, i, l) -> {
-            temperatureTextView.setText("Temperature: no temperature fetched");
+        citiesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                temperatureTextView.setText("Temperature: no temperature fetched");
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+                // Handle the case when nothing is selected
+            }
         });
 
-        fetchTemperatureButton.setOnClickListener(l -> {
-            readTemperatureFromDatabase(selectedReference, citiesSpinner.getSelectedItem().toString());
+        fetchTemperatureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String city = citiesSpinner.getSelectedItem().toString();
+                readTemperatureFromDatabase(city);
+            }
         });
 
-        setTemperatureButton.setOnClickListener(l -> {
-            String temperature = getTemperatureFromAPI(citiesSpinner.getSelectedItem().toString());
-            temperatureTextView.setText("Temperature: " + temperature);
-            writeTemperatureToDatabase(selectedReference, citiesSpinner.getSelectedItem().toString(),
-                    temperature);
+        setTemperatureButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String city = citiesSpinner.getSelectedItem().toString();
+                String temperature = getTemperatureFromAPI(city);
+                temperatureTextView.setText("Temperature: " + temperature);
+                writeTemperatureToDatabase(city, temperature);
+            }
         });
-
-         */
     }
 
     private String getTemperatureFromAPI(String city) {
@@ -143,20 +99,32 @@ public class MainActivity extends AppCompatActivity {
                 .toString();
     }
 
-    private void writeTemperatureToDatabase(DatabaseReference reference, String city, String temperature) {
-        String formattedCurrentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        Map<String, Object> value = new HashMap<>();
-        value.put(String.valueOf(System.currentTimeMillis()), temperature);
-        reference.child(city).child(formattedCurrentDate).setValue(value);
+    private void writeTemperatureToDatabase(String city, String temperature) {
+        if (temperature != null) {
+            String formattedCurrentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            Map<String, Object> value = new HashMap<>();
+            value.put(String.valueOf(System.currentTimeMillis()), temperature);
+            selectedReference.child(city).child(formattedCurrentDate).setValue(value);
+        } else {
+            Log.d(TAG, "Temperature is null");
+            // Handle the case when the temperature is null
+        }
     }
 
-    private void readTemperatureFromDatabase(DatabaseReference reference, String city) {
-        reference.child(city).get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                temperatureTextView.setText("Temperature: " + getTemperatureFromMap(city,
-                        (Map<String, Object>) task.getResult().getValue()));
-            } else {
-                Log.d(TAG, "onComplete: " + task.getException());
+    private void readTemperatureFromDatabase(String city) {
+        selectedReference.child(city).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    temperatureTextView.setText("Temperature: " + getTemperatureFromMap(city, dataSnapshot.getValue(Map.class)));
+                } else {
+                    temperatureTextView.setText("Temperature: Data not found");
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.d(TAG, "onCancelled: " + databaseError.getMessage());
             }
         });
     }
@@ -168,11 +136,11 @@ public class MainActivity extends AppCompatActivity {
 
         long max_time = 0;
         float temperature = 0;
-        for (Map.Entry<String,Object> entry : obj.entrySet()){
+        for (Map.Entry<String, Object> entry : obj.entrySet()) {
             Map<String, Object> val = (Map<String, Object>) entry.getValue();
             float currentTemperature = Float.parseFloat(val.get("temp").toString());
             long time = Long.valueOf(val.get("time").toString());
-            if (time > max_time){
+            if (time > max_time) {
                 max_time = time;
                 temperature = currentTemperature;
             }
