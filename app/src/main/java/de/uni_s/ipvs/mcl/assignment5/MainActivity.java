@@ -6,9 +6,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -27,6 +31,7 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
             "a23ec089a5b1cfc2ce6ccfd9524c7448");
     private DatabaseReference selectedReference;
     private TextView temperatureTextView;
+    private String selectedCity;
 
 
     @SuppressLint("SetTextI18n")
@@ -47,6 +53,8 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Log.i(TAG, "current time: " + System.currentTimeMillis());
 
         // FirebaseApp.initializeApp(this);
 
@@ -60,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
 
         DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference();
         DatabaseReference node = databaseRef.child("teams").child("15");
-        Button button_update = findViewById(R.id.button_update);
+        Button button_update = findViewById(R.id.button1);
         Button button_update_2 = findViewById(R.id.button2);
         DatabaseReference locationNodeRef = databaseRef.child("location");
 
@@ -88,6 +96,14 @@ public class MainActivity extends AppCompatActivity {
 
         Spinner citiesSpinner = findViewById(R.id.citiesSpinner);
         temperatureTextView = findViewById(R.id.temperatureTv);
+        final String[] spinnerItems = {"Stuttgart", "Paris", "Berlin"};
+        ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(this, com.google.android.material.R.layout.support_simple_spinner_dropdown_item, spinnerItems);
+        ArrayAdapter<CharSequence> adapter=ArrayAdapter.createFromResource(this, R.array.cities,
+                android.R.layout.simple_spinner_item);
+        citiesSpinner.setAdapter(arrayAdapter);
+
+
+        // arrayAdapter.add("Waiting for data ...");
 
 
         locationNodeRef.get().addOnCompleteListener(new OnCompleteListener<DataSnapshot>() {
@@ -105,11 +121,40 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        locationNodeRef.addListenerForSingleValueEvent(new ValueEventListener() {
+
+
+        DatabaseReference parisRef = locationNodeRef.child("Paris");
+        parisRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                Log.i(TAG, "Fetching child of location in locationNodeRef listener...");
-                Log.i("firebase", String.valueOf(snapshot.getValue()));
+                temperatureTextView.setText(snapshot.getValue().toString());
+                Log.i(TAG, "Paris: " + snapshot.getValue().toString());
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+        DatabaseReference stuttRef = locationNodeRef.child("Stuttgart");
+        stuttRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                temperatureTextView.setText(snapshot.getValue().toString());
+                Log.i(TAG, "Stuttgart: " + snapshot.getValue().toString());
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+        DatabaseReference berlinRef = locationNodeRef.child("Berlin");
+        berlinRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                temperatureTextView.setText(snapshot.getValue().toString());
+                Log.i(TAG, "Berlin: " + snapshot.getValue().toString());
             }
 
             @Override
@@ -119,10 +164,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // this func is nec
-        databaseRef.addValueEventListener(new ValueEventListener() {
+        locationNodeRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-
+                // arrayAdapter.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     // Process each child node
                     if(!childSnapshot.hasChildren()){
@@ -132,9 +177,8 @@ public class MainActivity extends AppCompatActivity {
                         Log.i(TAG, "Fetching child of location...");
                     }
 
-
-
                     String childKey = childSnapshot.getKey();
+                    // arrayAdapter.add(childKey);
                     Object childValue = childSnapshot.getValue();
                     Log.i(TAG,"Get updated location: " + childKey);
                     // Do something with the child key and value
@@ -147,7 +191,34 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        citiesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                Log.i(TAG, spinnerItems[position] + " is selected.");
+                selectedCity = spinnerItems[position];
 
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        EditText editText = findViewById(R.id.editText);
+        editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                boolean handled = false;
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    Log.i(TAG, "User input: " + v.getText());
+                    handled = true;
+                    writeTemperatureToDatabase(selectedCity, v.getText().toString());
+
+                }
+                return handled;
+            }
+        });
 
         /*
 
@@ -189,11 +260,12 @@ public class MainActivity extends AppCompatActivity {
                 .toString();
     }
 
-    private void writeTemperatureToDatabase(DatabaseReference reference, String city, String temperature) {
+    private void writeTemperatureToDatabase(String city, String temperature) {
+        DatabaseReference reference = FirebaseDatabase.getInstance().getReference().child("location").child(city);
         String formattedCurrentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         Map<String, Object> value = new HashMap<>();
         value.put(String.valueOf(System.currentTimeMillis()), temperature);
-        reference.child(city).child(formattedCurrentDate).setValue(value);
+        reference.child(formattedCurrentDate).push().setValue(value);
     }
 
     private void readTemperatureFromDatabase(DatabaseReference reference, String city) {
