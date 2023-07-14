@@ -1,5 +1,6 @@
 package de.uni_s.ipvs.mcl.assignment5;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
@@ -14,6 +15,8 @@ import android.widget.TextView;
 import com.github.prominence.openweathermap.api.OpenWeatherMapClient;
 import com.github.prominence.openweathermap.api.enums.Language;
 import com.github.prominence.openweathermap.api.enums.UnitSystem;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DataSnapshot;
@@ -32,10 +35,6 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
     private final OpenWeatherMapClient openWeatherClient = new OpenWeatherMapClient(
             "a23ec089a5b1cfc2ce6ccfd9524c7448");
-    // private final FirebaseDatabase database = FirebaseDatabase.getInstance();
-    // private final DatabaseReference myRef = database.getReference();
-    // private final DatabaseReference devReference = myRef.child("teams").child("15");
-    // private final DatabaseReference mainReference = myRef.child("location");
     private DatabaseReference selectedReference;
     private TextView temperatureTextView;
 
@@ -63,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
         DatabaseReference node = databaseRef.child("teams").child("15");
         Button button_update = findViewById(R.id.button_update);
         Button button_update_2 = findViewById(R.id.button2);
+        DatabaseReference locationNodeRef = databaseRef.child("location");
 
         button_update.setOnClickListener(l -> {
             Log.i(TAG, "Change value to 1");
@@ -72,22 +72,6 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "Change value to 2");
             node.setValue(2);
         });
-
-        /*
-        node.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                // Handle the retrieved data here
-                Log.i(TAG, "Detected data is changed to: " + dataSnapshot.getValue());
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Handle any errors
-            }
-        });
-
-         */
 
         node.addValueEventListener(new ValueEventListener() {
             @Override
@@ -102,9 +86,71 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        /*
         Spinner citiesSpinner = findViewById(R.id.citiesSpinner);
         temperatureTextView = findViewById(R.id.temperatureTv);
+
+
+        locationNodeRef.get().addOnCompleteListener(new OnCompleteListener<DataSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DataSnapshot> task) {
+                if (!task.isSuccessful()) {
+                    Log.i("firebase", "Error getting data", task.getException());
+                }
+                else {
+                    Log.i(TAG, "Fetching child of location in get...");
+                    Log.i("firebase", String.valueOf(task.getResult().getValue()));
+
+
+                }
+            }
+        });
+
+        locationNodeRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                Log.i(TAG, "Fetching child of location in locationNodeRef listener...");
+                Log.i("firebase", String.valueOf(snapshot.getValue()));
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
+        // this func is nec
+        databaseRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    // Process each child node
+                    if(!childSnapshot.hasChildren()){
+                        Log.i(TAG,"Location node has no child!");
+                    }
+                    else{
+                        Log.i(TAG, "Fetching child of location...");
+                    }
+
+
+
+                    String childKey = childSnapshot.getKey();
+                    Object childValue = childSnapshot.getValue();
+                    Log.i(TAG,"Get updated location: " + childKey);
+                    // Do something with the child key and value
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
+
+
+        /*
+
         Button fetchTemperatureButton = findViewById(R.id.getDataButton);
         Button setTemperatureButton = findViewById(R.id.setTemperatureButton);
 
