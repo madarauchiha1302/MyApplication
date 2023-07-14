@@ -2,8 +2,8 @@ package de.uni_s.ipvs.mcl.assignment5;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
-
     private String TAG = "MainActivity";
     private final OpenWeatherMapClient openWeatherClient = new OpenWeatherMapClient(
             "a23ec089a5b1cfc2ce6ccfd9524c7448");
@@ -72,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String city = citiesSpinner.getSelectedItem().toString();
-                readTemperatureFromDatabase(city);
+                readTemperatureFromDatabase(selectedReference, city);
             }
         });
 
@@ -80,23 +79,31 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String city = citiesSpinner.getSelectedItem().toString();
-                String temperature = getTemperatureFromAPI(city);
-                temperatureTextView.setText("Temperature: " + temperature);
-                writeTemperatureToDatabase(city, temperature);
+                // this must be done in a separate thread because it connects to the network
+                new Thread(() -> {
+                    StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+                    StrictMode.setThreadPolicy(policy);
+
+                    String temperature = readTemperatureFromAPI(city);
+
+                    temperatureTextView.setText("Temperature: " + temperature + " °C");
+                    writeTemperatureToDatabase(city, temperature);
+                }).run();
             }
         });
     }
 
-    private String getTemperatureFromAPI(String city) {
-        return openWeatherClient
-                .currentWeather()
+    private String readTemperatureFromAPI(String city) {
+        String[] tempData = openWeatherClient.currentWeather()
                 .single()
                 .byCityName(city)
                 .language(Language.GERMAN)
                 .unitSystem(UnitSystem.METRIC)
                 .retrieve()
                 .asJava()
-                .toString();
+                .toString().split(", ");
+
+        return tempData[tempData.length-3].split("°C")[0].trim();
     }
 
     private void writeTemperatureToDatabase(String city, String temperature) {
@@ -107,16 +114,26 @@ public class MainActivity extends AppCompatActivity {
             selectedReference.child(city).child(formattedCurrentDate).setValue(value);
         } else {
             Log.d(TAG, "Temperature is null");
-            // Handle the case when the temperature is null
         }
     }
 
-    private void readTemperatureFromDatabase(String city) {
+    private void readTemperatureFromDatabase(DatabaseReference reference, String city) {
+        reference.child(city).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                temperatureTextView.setText("Temperature: " + getTemperatureFromMap(
+                        (Map<String, Object>) task.getResult().getValue()) + " °C");
+            } else {
+                Log.d(TAG, "onComplete: " + task.getException());
+            }
+        });
+    }
+
+    private void readTemperatureFromDatabase_task2(String city) {
         selectedReference.child(city).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    temperatureTextView.setText("Temperature: " + getTemperatureFromMap(city, dataSnapshot.getValue(Map.class)));
+                    temperatureTextView.setText("Temperature: " + getTemperatureFromMap(dataSnapshot.getValue(Map.class)));
                 } else {
                     temperatureTextView.setText("Temperature: Data not found");
                 }
@@ -129,23 +146,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private String getTemperatureFromMap(String city, Map<String, Object> map) {
-        Map<String, Object> cityMap = (Map<String, Object>) map.get(city);
-        Map<String, Object> obj = (Map<String, Object>) cityMap.get(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+    private String getTemperatureFromMap(Map<String, Object> map) {
+        Log.w(TAG, map.toString());
+        Map<String, Object> obj = (Map<String, Object>) map.get(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         Log.i("read value", String.valueOf(obj));
 
-        long max_time = 0;
-        float temperature = 0;
-        for (Map.Entry<String, Object> entry : obj.entrySet()) {
-            Map<String, Object> val = (Map<String, Object>) entry.getValue();
-            float currentTemperature = Float.parseFloat(val.get("temp").toString());
-            long time = Long.valueOf(val.get("time").toString());
-            if (time > max_time) {
-                max_time = time;
-                temperature = currentTemperature;
-            }
-        }
-
-        return String.valueOf(temperature);
+        return String.valueOf(obj.values().toArray()[0]);
     }
 }
