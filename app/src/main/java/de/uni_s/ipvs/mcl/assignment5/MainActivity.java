@@ -33,6 +33,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
@@ -42,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
             "a23ec089a5b1cfc2ce6ccfd9524c7448");
     private DatabaseReference selectedReference;
     private TextView temperatureTextView;
+    private TextView latestTempTextView;
+    private TextView avgTempTextView;
     private String selectedCity;
 
 
@@ -53,6 +57,8 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        latestTempTextView = findViewById(R.id.textView_latestTemp);
+        avgTempTextView = findViewById(R.id.textView_avgTemp);
 
         // Log.i(TAG, "current time: " + System.currentTimeMillis());
 
@@ -127,8 +133,9 @@ public class MainActivity extends AppCompatActivity {
         parisRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                temperatureTextView.setText(snapshot.getValue().toString());
+                // temperatureTextView.setText(snapshot.getValue().toString());
                 Log.i(TAG, "Paris: " + snapshot.getValue().toString());
+                readLatestTemperature(snapshot);
             }
 
             @Override
@@ -140,8 +147,9 @@ public class MainActivity extends AppCompatActivity {
         stuttRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                temperatureTextView.setText(snapshot.getValue().toString());
+                // temperatureTextView.setText(snapshot.getValue().toString());
                 Log.i(TAG, "Stuttgart: " + snapshot.getValue().toString());
+                readLatestTemperature(snapshot);
             }
 
             @Override
@@ -153,8 +161,9 @@ public class MainActivity extends AppCompatActivity {
         berlinRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                temperatureTextView.setText(snapshot.getValue().toString());
+                // temperatureTextView.setText(snapshot.getValue().toString());
                 Log.i(TAG, "Berlin: " + snapshot.getValue().toString());
+                readLatestTemperature(snapshot);
             }
 
             @Override
@@ -225,15 +234,6 @@ public class MainActivity extends AppCompatActivity {
         Button fetchTemperatureButton = findViewById(R.id.getDataButton);
         Button setTemperatureButton = findViewById(R.id.setTemperatureButton);
 
-        ArrayAdapter<CharSequence> adapter=ArrayAdapter.createFromResource(this, R.array.cities,
-                android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_item);
-        citiesSpinner.setAdapter(adapter);
-
-        citiesSpinner.setOnItemClickListener((adapterView, view, i, l) -> {
-            temperatureTextView.setText("Temperature: no temperature fetched");
-        });
-
         fetchTemperatureButton.setOnClickListener(l -> {
             readTemperatureFromDatabase(selectedReference, citiesSpinner.getSelectedItem().toString());
         });
@@ -268,15 +268,75 @@ public class MainActivity extends AppCompatActivity {
         reference.child(formattedCurrentDate).push().setValue(value);
     }
 
-    private void readTemperatureFromDatabase(DatabaseReference reference, String city) {
-        reference.child(city).get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                temperatureTextView.setText("Temperature: " + getTemperatureFromMap(city,
-                        (Map<String, Object>) task.getResult().getValue()));
-            } else {
-                Log.d(TAG, "onComplete: " + task.getException());
+    private void readLatestTemperature(DataSnapshot dataSnapshot) {
+        Log.i(TAG, "Reading temp under " + selectedCity + "...");
+        String formattedCurrentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        float latestTemp = Float.NEGATIVE_INFINITY;
+        String latestTime = "0";
+        for (DataSnapshot dateSnapshot : dataSnapshot.getChildren()) {
+            // Process each child node
+            List<Float> list = new LinkedList<>();
+
+            String dateKey = dateSnapshot.getKey();
+
+            if (dateKey != null ){
+                if(dateKey.equals(formattedCurrentDate)) {
+
+                    Log.i(TAG, "date: " + dateKey);
+                    for (DataSnapshot timeSnapshot : dateSnapshot.getChildren()) {
+                        if(!timeSnapshot.exists()) return;
+
+                        if (timeSnapshot.hasChildren()) {
+                            for (DataSnapshot idSnapshot : timeSnapshot.getChildren()) {
+                                Log.i(TAG, "id: " + timeSnapshot.getKey());
+                                // String time = String.valueOf(idSnapshot.getKey());
+                                float temperature = Float.parseFloat(idSnapshot.getValue().toString());
+                                String time = String.valueOf(idSnapshot.getKey());
+                                Log.i(TAG, "time: " + timeSnapshot.getKey());
+                                if(time.compareTo(latestTime) > 0){
+                                    latestTime = time;
+                                    latestTemp= temperature;
+                                }
+                                list.add(temperature);
+                                Log.i(TAG, "temperature: " + idSnapshot.getValue());
+                            }
+                        }
+                        else{
+                            float temperature = Float.parseFloat(timeSnapshot.getValue().toString());
+                            list.add(temperature);
+                            String time = String.valueOf(timeSnapshot.getKey());
+                            Log.i(TAG, "time: " + timeSnapshot.getKey());
+                            if(time.compareTo(latestTime) > 0){
+                                latestTime = time;
+                                latestTemp= temperature;
+                            }
+                        }
+
+
+
+                    }
+
+                    Log.i(TAG, "Latest temp under " + selectedCity + ": " + latestTemp);
+                    latestTempTextView.setText(String.valueOf(latestTemp));
+                    float avgTemp = calculateAvg(list);
+                    Log.i(TAG, "Average temp under " + selectedCity + ": " + avgTemp);
+                    avgTempTextView.setText(String.valueOf(avgTemp));
+
+                }
+
+
             }
-        });
+
+        }
+    }
+
+
+    private float calculateAvg(List<Float> l){
+        float sum = 0;
+        for(float num: l){
+            sum += num;
+        }
+        return sum / l.size();
     }
 
     private String getTemperatureFromMap(String city, Map<String, Object> map) {

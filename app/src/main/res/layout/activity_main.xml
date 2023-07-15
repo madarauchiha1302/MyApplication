@@ -59,13 +59,33 @@
         app:layout_constraintTop_toBottomOf="@+id/button1" />
 
     <TextView
-        android:id="@+id/textView_aveTemp"
+        android:id="@+id/textView_avgTemp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="72dp"
         android:layout_marginTop="52dp"
         android:text="Waiting for data..."
         app:layout_constraintStart_toEndOf="@+id/temperatureTv"
+        app:layout_constraintTop_toBottomOf="@+id/citiesSpinner" />
+
+    <TextView
+        android:id="@+id/textView_latestLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="44dp"
+        android:layout_marginTop="20dp"
+        android:text="Latest Temperature:"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/citiesSpinner" />
+
+    <TextView
+        android:id="@+id/textView_latestTemp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="84dp"
+        android:layout_marginTop="20dp"
+        android:text="Wating for data ..."
+        app:layout_constraintStart_toEndOf="@+id/textView_latestLabel"
         app:layout_constraintTop_toBottomOf="@+id/citiesSpinner" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
