@@ -16,6 +16,7 @@ import com.github.prominence.openweathermap.api.OpenWeatherMapClient;
 import com.github.prominence.openweathermap.api.enums.Language;
 import com.github.prominence.openweathermap.api.enums.UnitSystem;
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.FirebaseOptions;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -31,8 +32,8 @@ public class MainActivity extends AppCompatActivity {
     private String TAG = "MainActivity";
     private final OpenWeatherMapClient openWeatherClient = new OpenWeatherMapClient(
             "a23ec089a5b1cfc2ce6ccfd9524c7448");
-    private final DatabaseReference devReference = FirebaseDatabase.getInstance().getReference().child("teams").child("15");
-    private final DatabaseReference mainReference = FirebaseDatabase.getInstance().getReference().child("location");
+    private DatabaseReference devReference;
+    private DatabaseReference mainReference;
     private DatabaseReference selectedReference;
     private TextView temperatureTextView;
 
@@ -41,9 +42,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        FirebaseApp.initializeApp(this);
+        FirebaseOptions options = new FirebaseOptions.Builder()
+                .setApplicationId("de.uni_s.ipvs.mcl.assignment5")
+                .setApiKey("AIzaSyBnbpsN3vfoo5xES2y4iTuKVz0btRoPUBU")
+                .setDatabaseUrl("https://assignment5-b5c92.firebaseio.com")
+                .build();
 
-        selectedReference = devReference; // Choose the appropriate reference here
+        FirebaseApp.initializeApp(getApplicationContext(), options, "My application");
+
+        devReference = FirebaseDatabase.getInstance().getReference().child("teams").child("15");
+        mainReference = FirebaseDatabase.getInstance().getReference().child("location");
+        selectedReference = mainReference; // Choose the appropriate reference here
 
         Spinner citiesSpinner = findViewById(R.id.citiesSpinner);
         temperatureTextView = findViewById(R.id.temperatureTv);
@@ -148,9 +157,10 @@ public class MainActivity extends AppCompatActivity {
 
     private String getTemperatureFromMap(Map<String, Object> map) {
         Log.w(TAG, map.toString());
-        Map<String, Object> obj = (Map<String, Object>) map.get(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        Log.i("read value", String.valueOf(obj));
 
-        return String.valueOf(obj.values().toArray()[0]);
+        Map<String, Object> temperatureMap = (Map<String, Object>) map.values().toArray()[0];
+        Log.i("read value", String.valueOf(temperatureMap));
+
+        return String.valueOf(temperatureMap.values().toArray()[0]);
     }
 }
