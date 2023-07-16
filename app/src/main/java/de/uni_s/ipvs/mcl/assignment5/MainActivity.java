@@ -74,18 +74,9 @@ public class MainActivity extends AppCompatActivity {
 
         DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference();
         DatabaseReference node = databaseRef.child("teams").child("15");
-        Button button_update = findViewById(R.id.button1);
-        Button button_update_2 = findViewById(R.id.button2);
+
         DatabaseReference locationNodeRef = databaseRef.child("location");
 
-        button_update.setOnClickListener(l -> {
-            Log.i(TAG, "Change value to 1");
-            node.setValue(1);
-        });
-        button_update_2.setOnClickListener(l -> {
-            Log.i(TAG, "Change value to 2");
-            node.setValue(2);
-        });
 
         node.addValueEventListener(new ValueEventListener() {
             @Override
