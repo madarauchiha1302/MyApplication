@@ -55,8 +55,7 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("SetTextI18n")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // FOR GENERAL TESTING USE devReference, FOR FINAL TESTS USE mainReference
-        // selectedReference = devReference;
+
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -65,8 +64,6 @@ public class MainActivity extends AppCompatActivity {
         mContext = this;
 
         // Log.i(TAG, "current time: " + System.currentTimeMillis());
-
-        // FirebaseApp.initializeApp(this);
 
         FirebaseOptions options = new FirebaseOptions.Builder()
                 .setApplicationId("de.uni_s.ipvs.mcl.assignment5")
@@ -77,8 +74,6 @@ public class MainActivity extends AppCompatActivity {
         FirebaseApp.initializeApp(getApplicationContext(), options, "My application");
 
         DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference();
-        DatabaseReference node = databaseRef.child("teams").child("15");
-
         DatabaseReference locationNodeRef = databaseRef.child("location");
 
 
@@ -86,19 +81,24 @@ public class MainActivity extends AppCompatActivity {
         temperatureTextView = findViewById(R.id.temperatureTv);
         final String[] spinnerItems = {"Stuttgart", "Paris", "Berlin"};
         ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(this, com.google.android.material.R.layout.support_simple_spinner_dropdown_item, spinnerItems);
-        ArrayAdapter<CharSequence> adapter=ArrayAdapter.createFromResource(this, R.array.cities,
-                android.R.layout.simple_spinner_item);
         citiesSpinner.setAdapter(arrayAdapter);
 
 
-
         DatabaseReference parisRef = locationNodeRef.child("Paris");
+
+        // register the event listener to update display on current selected city
         parisRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // temperatureTextView.setText(snapshot.getValue().toString());
+
                 Log.i(TAG, "Paris: " + snapshot.getValue().toString());
-                readLatestTemperature(snapshot);
+
+                // only if the selected city matched, update the display
+                // this avoids display update in the func overwriting current display
+                // when start the first time
+                if(selectedCity.equals("Paris")){
+                    readLatestTemperature(snapshot);
+                }
             }
 
             @Override
@@ -110,9 +110,10 @@ public class MainActivity extends AppCompatActivity {
         stuttRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // temperatureTextView.setText(snapshot.getValue().toString());
                 Log.i(TAG, "Stuttgart: " + snapshot.getValue().toString());
-                readLatestTemperature(snapshot);
+                if(selectedCity.equals("Stuttgart")){
+                    readLatestTemperature(snapshot);
+                }
             }
 
             @Override
@@ -124,9 +125,10 @@ public class MainActivity extends AppCompatActivity {
         berlinRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // temperatureTextView.setText(snapshot.getValue().toString());
                 Log.i(TAG, "Berlin: " + snapshot.getValue().toString());
-                readLatestTemperature(snapshot);
+                if(selectedCity.equals("Berlin")){
+                    readLatestTemperature(snapshot);
+                }
             }
 
             @Override
@@ -135,11 +137,55 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
+        //  when user select a city, fetch data and update display
         citiesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 Log.i(TAG, spinnerItems[position] + " is selected.");
                 selectedCity = spinnerItems[position];
+
+                if(selectedCity.equals("Stuttgart")){
+                    stuttRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            readLatestTemperature(snapshot);
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+
+                        }
+                    });
+
+                }
+                else if(selectedCity.equals("Berlin")){
+                    berlinRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            readLatestTemperature(snapshot);
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+
+                        }
+                    });
+
+                }
+                else if(selectedCity.equals("Paris")){
+                    parisRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            readLatestTemperature(snapshot);
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+
+                        }
+                    });
+                }
 
 
             }
@@ -183,7 +229,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void readLatestTemperature(DataSnapshot dataSnapshot) {
-        Log.i(TAG, "Reading temp under " + selectedCity + "...");
+        if(!dataSnapshot.exists()) return;
+        Log.i(TAG, "Reading temp under " + dataSnapshot.getKey() + "...");
+
         String formattedCurrentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         float latestTemp = Float.NEGATIVE_INFINITY;
         String latestTime = "0";
@@ -192,21 +240,18 @@ public class MainActivity extends AppCompatActivity {
 
             // list to store all valid temperature value within one day
             List<Float> list = new LinkedList<>();
-
             String dateKey = dateSnapshot.getKey();
-
             if (dateKey != null ){
                 if(dateKey.equals(formattedCurrentDate)) {
-
                     Log.i(TAG, "date: " + dateKey);
 
                     for (DataSnapshot timeSnapshot : dateSnapshot.getChildren()) {
                         if(!timeSnapshot.exists()) return;
                         // for timeSnapshot has {id=temperature} as child
                         if (timeSnapshot.hasChildren()) {
+
                             for (DataSnapshot idSnapshot : timeSnapshot.getChildren()) {
                                 Log.i(TAG, "id: " + idSnapshot.getKey());
-
                                 String temp = idSnapshot.getValue().toString();
                                 if(!temp.matches("\\d+(\\.\\d+)?")) {
                                     continue;
@@ -242,10 +287,10 @@ public class MainActivity extends AppCompatActivity {
 
                     }
 
-                    Log.i(TAG, "Latest temp under " + selectedCity + ": " + latestTemp);
+                    Log.i(TAG, "Latest temp under " + dataSnapshot.getKey() + ": " + latestTemp);
                     latestTempTextView.setText(String.valueOf(latestTemp));
                     float avgTemp = calculateAvg(list);
-                    Log.i(TAG, "Average temp under " + selectedCity + ": " + avgTemp);
+                    Log.i(TAG, "Average temp under " + dataSnapshot.getKey() + ": " + avgTemp);
                     avgTempTextView.setText(String.valueOf(avgTemp));
 
                 }
