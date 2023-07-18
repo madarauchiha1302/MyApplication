@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -15,6 +16,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.github.prominence.openweathermap.api.OpenWeatherMapClient;
 import com.github.prominence.openweathermap.api.enums.Language;
@@ -47,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView latestTempTextView;
     private TextView avgTempTextView;
     private String selectedCity;
+    private Context mContext;
 
 
     @SuppressLint("SetTextI18n")
@@ -59,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         latestTempTextView = findViewById(R.id.textView_latestTemp);
         avgTempTextView = findViewById(R.id.textView_avgTemp);
+        mContext = this;
 
         // Log.i(TAG, "current time: " + System.currentTimeMillis());
 
@@ -78,19 +82,6 @@ public class MainActivity extends AppCompatActivity {
         DatabaseReference locationNodeRef = databaseRef.child("location");
 
 
-        node.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                // Handle the retrieved data here
-                Log.i(TAG, "Detected data is changed to: " + dataSnapshot.getValue());
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Handle any errors
-            }
-        });
-
         Spinner citiesSpinner = findViewById(R.id.citiesSpinner);
         temperatureTextView = findViewById(R.id.temperatureTv);
         final String[] spinnerItems = {"Stuttgart", "Paris", "Berlin"};
@@ -98,25 +89,6 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<CharSequence> adapter=ArrayAdapter.createFromResource(this, R.array.cities,
                 android.R.layout.simple_spinner_item);
         citiesSpinner.setAdapter(arrayAdapter);
-
-
-        // arrayAdapter.add("Waiting for data ...");
-
-
-        locationNodeRef.get().addOnCompleteListener(new OnCompleteListener<DataSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DataSnapshot> task) {
-                if (!task.isSuccessful()) {
-                    Log.i("firebase", "Error getting data", task.getException());
-                }
-                else {
-                    Log.i(TAG, "Fetching child of location in get...");
-                    Log.i("firebase", String.valueOf(task.getResult().getValue()));
-
-
-                }
-            }
-        });
 
 
 
@@ -197,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
                 Log.i(TAG, spinnerItems[position] + " is selected.");
                 selectedCity = spinnerItems[position];
 
+
             }
 
             @Override
@@ -213,42 +186,20 @@ public class MainActivity extends AppCompatActivity {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
                     Log.i(TAG, "User input: " + v.getText());
                     handled = true;
-                    writeTemperatureToDatabase(selectedCity, v.getText().toString());
+                    String inputTemp = v.getText().toString();
+
+                    if(inputTemp.matches("\\d+(\\.\\d+)?")){
+                        writeTemperatureToDatabase(selectedCity, v.getText().toString());
+                    }
+                    else{
+                        Toast.makeText(mContext, "Please input a valid temperature! Hint: two number digits.", Toast.LENGTH_SHORT).show();
+                    }
+
 
                 }
                 return handled;
             }
         });
-
-        /*
-
-        Button fetchTemperatureButton = findViewById(R.id.getDataButton);
-        Button setTemperatureButton = findViewById(R.id.setTemperatureButton);
-
-        fetchTemperatureButton.setOnClickListener(l -> {
-            readTemperatureFromDatabase(selectedReference, citiesSpinner.getSelectedItem().toString());
-        });
-
-        setTemperatureButton.setOnClickListener(l -> {
-            String temperature = getTemperatureFromAPI(citiesSpinner.getSelectedItem().toString());
-            temperatureTextView.setText("Temperature: " + temperature);
-            writeTemperatureToDatabase(selectedReference, citiesSpinner.getSelectedItem().toString(),
-                    temperature);
-        });
-
-         */
-    }
-
-    private String getTemperatureFromAPI(String city) {
-        return openWeatherClient
-                .currentWeather()
-                .single()
-                .byCityName(city)
-                .language(Language.GERMAN)
-                .unitSystem(UnitSystem.METRIC)
-                .retrieve()
-                .asJava()
-                .toString();
     }
 
     private void writeTemperatureToDatabase(String city, String temperature) {
@@ -281,6 +232,10 @@ public class MainActivity extends AppCompatActivity {
                             for (DataSnapshot idSnapshot : timeSnapshot.getChildren()) {
                                 Log.i(TAG, "id: " + timeSnapshot.getKey());
                                 // String time = String.valueOf(idSnapshot.getKey());
+                                String temp = idSnapshot.getValue().toString();
+                                if(!temp.matches("\\d+(\\.\\d+)?")) {
+                                    continue;
+                                }
                                 float temperature = Float.parseFloat(idSnapshot.getValue().toString());
                                 String time = String.valueOf(idSnapshot.getKey());
                                 Log.i(TAG, "time: " + timeSnapshot.getKey());
@@ -293,6 +248,10 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                         else{
+                            String temp = timeSnapshot.getValue().toString();
+                            if(!temp.matches("\\d+(\\.\\d+)?")) {
+                                continue;
+                            }
                             float temperature = Float.parseFloat(timeSnapshot.getValue().toString());
                             list.add(temperature);
                             String time = String.valueOf(timeSnapshot.getKey());
@@ -328,25 +287,5 @@ public class MainActivity extends AppCompatActivity {
             sum += num;
         }
         return sum / l.size();
-    }
-
-    private String getTemperatureFromMap(String city, Map<String, Object> map) {
-        Map<String, Object> cityMap = (Map<String, Object>) map.get(city);
-        Map<String, Object> obj = (Map<String, Object>) cityMap.get(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-        Log.i("read value", String.valueOf(obj));
-
-        long max_time = 0;
-        float temperature = 0;
-        for (Map.Entry<String,Object> entry : obj.entrySet()){
-            Map<String, Object> val = (Map<String, Object>) entry.getValue();
-            float currentTemperature = Float.parseFloat(val.get("temp").toString());
-            long time = Long.valueOf(val.get("time").toString());
-            if (time > max_time){
-                max_time = time;
-                temperature = currentTemperature;
-            }
-        }
-
-        return String.valueOf(temperature);
     }
 }
