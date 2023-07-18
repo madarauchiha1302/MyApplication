@@ -137,24 +137,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void readTemperatureFromDatabase_task2(String city) {
-        selectedReference.child(city).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    temperatureTextView.setText("Temperature: " + getTemperatureFromMap(dataSnapshot.getValue(Map.class)));
-                } else {
-                    temperatureTextView.setText("Temperature: Data not found");
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.d(TAG, "onCancelled: " + databaseError.getMessage());
-            }
-        });
-    }
-
     private String getTemperatureFromMap(Map<String, Object> map) {
         Log.w(TAG, map.toString());
 
