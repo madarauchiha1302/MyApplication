@@ -135,34 +135,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // this func is nec
-        locationNodeRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // arrayAdapter.clear();
-                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    // Process each child node
-                    if(!childSnapshot.hasChildren()){
-                        Log.i(TAG,"Location node has no child!");
-                    }
-                    else{
-                        Log.i(TAG, "Fetching child of location...");
-                    }
-
-                    String childKey = childSnapshot.getKey();
-                    // arrayAdapter.add(childKey);
-                    Object childValue = childSnapshot.getValue();
-                    Log.i(TAG,"Get updated location: " + childKey);
-                    // Do something with the child key and value
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-
-            }
-        });
-
         citiesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -217,6 +189,8 @@ public class MainActivity extends AppCompatActivity {
         String latestTime = "0";
         for (DataSnapshot dateSnapshot : dataSnapshot.getChildren()) {
             // Process each child node
+
+            // list to store all valid temperature value within one day
             List<Float> list = new LinkedList<>();
 
             String dateKey = dateSnapshot.getKey();
@@ -225,13 +199,14 @@ public class MainActivity extends AppCompatActivity {
                 if(dateKey.equals(formattedCurrentDate)) {
 
                     Log.i(TAG, "date: " + dateKey);
+
                     for (DataSnapshot timeSnapshot : dateSnapshot.getChildren()) {
                         if(!timeSnapshot.exists()) return;
-
+                        // for timeSnapshot has {id=temperature} as child
                         if (timeSnapshot.hasChildren()) {
                             for (DataSnapshot idSnapshot : timeSnapshot.getChildren()) {
-                                Log.i(TAG, "id: " + timeSnapshot.getKey());
-                                // String time = String.valueOf(idSnapshot.getKey());
+                                Log.i(TAG, "id: " + idSnapshot.getKey());
+
                                 String temp = idSnapshot.getValue().toString();
                                 if(!temp.matches("\\d+(\\.\\d+)?")) {
                                     continue;
@@ -247,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
                                 Log.i(TAG, "temperature: " + idSnapshot.getValue());
                             }
                         }
+                        // for timeSnapshot has {time=temperature} structure
                         else{
                             String temp = timeSnapshot.getValue().toString();
                             if(!temp.matches("\\d+(\\.\\d+)?")) {
